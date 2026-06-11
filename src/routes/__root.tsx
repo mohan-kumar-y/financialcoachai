@@ -79,14 +79,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "WealthOS — Your Personal Financial Operating System" },
+      { title: "AI Financial Coach" },
       {
         name: "description",
         content:
           "A login-protected dashboard that tells you exactly where to put your salary, when to step up SIPs, when to deploy lump-sum, and when to rebalance — by income level.",
       },
       { name: "author", content: "WealthOS" },
-      { property: "og:title", content: "WealthOS — Your Personal Financial Operating System" },
+      { property: "og:title", content: "AI Financial Coach" },
       {
         property: "og:description",
         content:
@@ -95,6 +95,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "AI Financial Coach" },
+      { name: "description", content: "Your Financial Compass visualizes personal finance and investment roadmaps for optimal salary allocation." },
+      { property: "og:description", content: "Your Financial Compass visualizes personal finance and investment roadmaps for optimal salary allocation." },
+      { name: "twitter:description", content: "Your Financial Compass visualizes personal finance and investment roadmaps for optimal salary allocation." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1b4903af-8940-45e6-93ba-cfca259a0e9c/id-preview-071d4cff--4eb056cc-5a4c-4f15-b21d-2423d8aeddee.lovable.app-1781200468525.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1b4903af-8940-45e6-93ba-cfca259a0e9c/id-preview-071d4cff--4eb056cc-5a4c-4f15-b21d-2423d8aeddee.lovable.app-1781200468525.png" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
