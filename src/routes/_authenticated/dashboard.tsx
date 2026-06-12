@@ -22,7 +22,6 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchPlan = useServerFn(getMyPlan);
   const savePlan = useServerFn(saveMyPlan);
