@@ -354,11 +354,11 @@ function BreakdownCard({
             <div className="mt-4 space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Target: {formatINR(target, true)}</span>
-                <span>{progress}% in 6 mo</span>
+                <span>{progress}% funded</span>
               </div>
               <Progress value={progress} />
               <p className="text-xs text-muted-foreground">
-                ~6 months of contributions reaches your buffer.
+                Fully funded in ~{monthsToFund} months at this contribution.
               </p>
             </div>
           ) : (
