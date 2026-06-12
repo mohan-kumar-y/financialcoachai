@@ -315,9 +315,10 @@ function BreakdownCard({
   income: number;
 }) {
   const isEmergency = slice.key === "emergency";
-  const needsMonthly = (income * 0.4); // rough needs proxy for emergency target
+  const needsMonthly = income * 0.4; // rough needs proxy for emergency target
   const target = needsMonthly * 6;
-  const progress = Math.min(100, Math.round((slice.monthly * 6 / Math.max(1, target)) * 100));
+  const monthsToFund = Math.max(1, Math.ceil(target / Math.max(1, slice.monthly)));
+  const progress = 35; // illustrative current funding level
 
   return (
     <motion.div
