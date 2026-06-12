@@ -61,7 +61,7 @@ function SpendingPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <AppNav displayName={data?.displayName} />
+      <AppNav displayName={data?.displayName ?? undefined} />
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
         <div>
           <h1 className="font-display text-2xl font-bold sm:text-3xl">Spending Tracker</h1>
