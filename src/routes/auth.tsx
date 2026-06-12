@@ -23,7 +23,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -39,6 +39,15 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Password reset link sent. Check your inbox.");
+        setMode("signin");
+        return;
+      }
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
@@ -62,6 +71,7 @@ function AuthPage() {
       setLoading(false);
     }
   };
+
 
   const handleGoogle = async () => {
     setLoading(true);
@@ -118,31 +128,41 @@ function AuthPage() {
             </Link>
           </div>
           <h2 className="font-display text-2xl font-bold">
-            {mode === "signup" ? "Create your account" : "Welcome back"}
+            {mode === "signup"
+              ? "Create your account"
+              : mode === "forgot"
+                ? "Reset your password"
+                : "Welcome back"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "signup"
               ? "Start building your financial operating system."
-              : "Sign in to your dashboard."}
+              : mode === "forgot"
+                ? "Enter your email and we'll send you a reset link."
+                : "Sign in to your dashboard."}
           </p>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-6 w-full"
-            onClick={handleGoogle}
-            disabled={loading}
-          >
-            <GoogleIcon /> Continue with Google
-          </Button>
+          {mode !== "forgot" && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-6 w-full"
+                onClick={handleGoogle}
+                disabled={loading}
+              >
+                <GoogleIcon /> Continue with Google
+              </Button>
 
-          <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            OR
-            <span className="h-px flex-1 bg-border" />
-          </div>
+              <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                OR
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            </>
+          )}
 
-          <form onSubmit={handleEmail} className="space-y-4">
+          <form onSubmit={handleEmail} className={mode === "forgot" ? "mt-6 space-y-4" : "space-y-4"}>
             {mode === "signup" && (
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
@@ -167,35 +187,65 @@ function AuthPage() {
                 autoComplete="email"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              />
-            </div>
+            {mode !== "forgot" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  {mode === "signin" && (
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-primary hover:underline"
+                      onClick={() => setMode("forgot")}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {mode === "signup" ? "Create account" : "Sign in"}
+              {mode === "signup"
+                ? "Create account"
+                : mode === "forgot"
+                  ? "Send reset link"
+                  : "Sign in"}
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {mode === "signup" ? "Already have an account?" : "New here?"}{" "}
-            <button
-              type="button"
-              className="font-semibold text-primary hover:underline"
-              onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
-            >
-              {mode === "signup" ? "Sign in" : "Create one"}
-            </button>
-          </p>
+          {mode === "forgot" ? (
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Remembered it?{" "}
+              <button
+                type="button"
+                className="font-semibold text-primary hover:underline"
+                onClick={() => setMode("signin")}
+              >
+                Back to sign in
+              </button>
+            </p>
+          ) : (
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              {mode === "signup" ? "Already have an account?" : "New here?"}{" "}
+              <button
+                type="button"
+                className="font-semibold text-primary hover:underline"
+                onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+              >
+                {mode === "signup" ? "Sign in" : "Create one"}
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>
