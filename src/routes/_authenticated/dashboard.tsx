@@ -1,11 +1,11 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
 import { getMyPlan, saveMyPlan } from "@/lib/plan.functions";
 import { computePlan, DEFAULT_INPUTS, getTier, type PlanInputs } from "@/lib/finance";
 import { PlanForm } from "@/components/dashboard/PlanForm";
+import { AppNav } from "@/components/app-nav";
 import {
   AllocationSection,
   RoadmapSection,
@@ -14,9 +14,8 @@ import {
   ActionsSection,
   CheckpointsSection,
 } from "@/components/dashboard/PlanSections";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { LogOut, Loader2, TrendingUp } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
