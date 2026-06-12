@@ -78,13 +78,6 @@ function Dashboard() {
     }
   };
 
-  const handleSignOut = async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  };
-
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -95,24 +88,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold text-primary">
-            <TrendingUp className="h-5 w-5" />
-            WealthOS
-          </Link>
-          <div className="flex items-center gap-3">
-            {data?.displayName && (
-              <span className="hidden text-sm text-muted-foreground sm:inline">
-                Hi, {data.displayName}
-              </span>
-            )}
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4" /> Sign out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppNav displayName={data?.displayName ?? undefined} />
 
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
         <div>
