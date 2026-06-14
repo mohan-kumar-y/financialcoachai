@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticated/spending'
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAdvisorRouteImport } from './routes/_authenticated/advisor'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -63,6 +64,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdvisorRoute = AuthenticatedAdvisorRouteImport.update({
+  id: '/advisor',
+  path: '/advisor',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/blueprints': typeof BlueprintsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/advisor': typeof AuthenticatedAdvisorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/goals': typeof AuthenticatedGoalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/blueprints': typeof BlueprintsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/advisor': typeof AuthenticatedAdvisorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/goals': typeof AuthenticatedGoalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/blueprints': typeof BlueprintsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/advisor': typeof AuthenticatedAdvisorRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
     | '/blueprints'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/advisor'
     | '/dashboard'
     | '/goals'
     | '/spending'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
     | '/blueprints'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/advisor'
     | '/dashboard'
     | '/goals'
     | '/spending'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/blueprints'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/_authenticated/advisor'
     | '/_authenticated/dashboard'
     | '/_authenticated/goals'
     | '/_authenticated/spending'
@@ -204,16 +216,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/advisor': {
+      id: '/_authenticated/advisor'
+      path: '/advisor'
+      fullPath: '/advisor'
+      preLoaderRoute: typeof AuthenticatedAdvisorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdvisorRoute: typeof AuthenticatedAdvisorRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
   AuthenticatedSpendingRoute: typeof AuthenticatedSpendingRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdvisorRoute: AuthenticatedAdvisorRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
   AuthenticatedSpendingRoute: AuthenticatedSpendingRoute,
@@ -233,3 +254,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
