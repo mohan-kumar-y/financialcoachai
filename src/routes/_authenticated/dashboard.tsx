@@ -132,8 +132,17 @@ function Dashboard() {
   const recent = expenses.slice(0, 5);
   const allocData = plan.buckets.map((b) => ({ name: b.label, value: b.pct, color: b.color }));
 
-  const kpis = [
-    { label: "Net Worth", value: netWorth, suffix: "", icon: Wallet, color: "#0f8b8d", trend: monthChange, trendUp: true },
+  const kpis: {
+    label: string;
+    value: number;
+    icon: typeof Wallet;
+    color: string;
+    trend: number;
+    trendUp: boolean;
+    pct?: boolean;
+    isPct?: boolean;
+  }[] = [
+    { label: "Net Worth", value: netWorth, icon: Wallet, color: "#0f8b8d", trend: monthChange, trendUp: true },
     { label: "Investments", value: portfolio.current + byCategory(expenses).investments, icon: TrendingUp, color: "#6366f1", trend: portfolio.pnlPct, trendUp: portfolio.pnlPct >= 0, pct: true },
     { label: "Savings Rate", value: summary.savingsRate, isPct: true, icon: PiggyBank, color: "#22c55e", trend: 4, trendUp: true },
     { label: "Goal Progress", value: 62, isPct: true, icon: Target, color: "#f59e0b", trend: 3, trendUp: true },
