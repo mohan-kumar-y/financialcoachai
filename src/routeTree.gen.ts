@@ -16,8 +16,11 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticated/spending'
+import { Route as AuthenticatedProjectionsRouteImport } from './routes/_authenticated/projections'
+import { Route as AuthenticatedPlaybookRouteImport } from './routes/_authenticated/playbook'
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAdvisorRouteImport } from './routes/_authenticated/advisor'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -53,6 +56,17 @@ const AuthenticatedSpendingRoute = AuthenticatedSpendingRouteImport.update({
   path: '/spending',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProjectionsRoute =
+  AuthenticatedProjectionsRouteImport.update({
+    id: '/projections',
+    path: '/projections',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPlaybookRoute = AuthenticatedPlaybookRouteImport.update({
+  id: '/playbook',
+  path: '/playbook',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedGoalsRoute = AuthenticatedGoalsRouteImport.update({
   id: '/goals',
   path: '/goals',
@@ -63,6 +77,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdvisorRoute = AuthenticatedAdvisorRouteImport.update({
+  id: '/advisor',
+  path: '/advisor',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -70,8 +89,11 @@ export interface FileRoutesByFullPath {
   '/blueprints': typeof BlueprintsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/advisor': typeof AuthenticatedAdvisorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/goals': typeof AuthenticatedGoalsRoute
+  '/playbook': typeof AuthenticatedPlaybookRoute
+  '/projections': typeof AuthenticatedProjectionsRoute
   '/spending': typeof AuthenticatedSpendingRoute
 }
 export interface FileRoutesByTo {
@@ -80,8 +102,11 @@ export interface FileRoutesByTo {
   '/blueprints': typeof BlueprintsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/advisor': typeof AuthenticatedAdvisorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/goals': typeof AuthenticatedGoalsRoute
+  '/playbook': typeof AuthenticatedPlaybookRoute
+  '/projections': typeof AuthenticatedProjectionsRoute
   '/spending': typeof AuthenticatedSpendingRoute
 }
 export interface FileRoutesById {
@@ -92,8 +117,11 @@ export interface FileRoutesById {
   '/blueprints': typeof BlueprintsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/advisor': typeof AuthenticatedAdvisorRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
+  '/_authenticated/playbook': typeof AuthenticatedPlaybookRoute
+  '/_authenticated/projections': typeof AuthenticatedProjectionsRoute
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
 }
 export interface FileRouteTypes {
@@ -104,8 +132,11 @@ export interface FileRouteTypes {
     | '/blueprints'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/advisor'
     | '/dashboard'
     | '/goals'
+    | '/playbook'
+    | '/projections'
     | '/spending'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -114,8 +145,11 @@ export interface FileRouteTypes {
     | '/blueprints'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/advisor'
     | '/dashboard'
     | '/goals'
+    | '/playbook'
+    | '/projections'
     | '/spending'
   id:
     | '__root__'
@@ -125,8 +159,11 @@ export interface FileRouteTypes {
     | '/blueprints'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/_authenticated/advisor'
     | '/_authenticated/dashboard'
     | '/_authenticated/goals'
+    | '/_authenticated/playbook'
+    | '/_authenticated/projections'
     | '/_authenticated/spending'
   fileRoutesById: FileRoutesById
 }
@@ -190,6 +227,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSpendingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/projections': {
+      id: '/_authenticated/projections'
+      path: '/projections'
+      fullPath: '/projections'
+      preLoaderRoute: typeof AuthenticatedProjectionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/playbook': {
+      id: '/_authenticated/playbook'
+      path: '/playbook'
+      fullPath: '/playbook'
+      preLoaderRoute: typeof AuthenticatedPlaybookRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/goals': {
       id: '/_authenticated/goals'
       path: '/goals'
@@ -204,18 +255,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/advisor': {
+      id: '/_authenticated/advisor'
+      path: '/advisor'
+      fullPath: '/advisor'
+      preLoaderRoute: typeof AuthenticatedAdvisorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdvisorRoute: typeof AuthenticatedAdvisorRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
+  AuthenticatedPlaybookRoute: typeof AuthenticatedPlaybookRoute
+  AuthenticatedProjectionsRoute: typeof AuthenticatedProjectionsRoute
   AuthenticatedSpendingRoute: typeof AuthenticatedSpendingRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdvisorRoute: AuthenticatedAdvisorRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
+  AuthenticatedPlaybookRoute: AuthenticatedPlaybookRoute,
+  AuthenticatedProjectionsRoute: AuthenticatedProjectionsRoute,
   AuthenticatedSpendingRoute: AuthenticatedSpendingRoute,
 }
 

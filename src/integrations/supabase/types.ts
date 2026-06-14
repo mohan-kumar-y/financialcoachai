@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          expense_date: string
+          id: string
+          notes: string | null
+          payment_method: string
+          subcategory: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          subcategory?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          subcategory?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       financial_plans: {
         Row: {
           annual_increment_pct: number
@@ -54,6 +93,48 @@ export type Database = {
           id?: string
           monthly_expenses?: number
           sip_step_up_pct?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      holdings: {
+        Row: {
+          asset_type: string
+          avg_buy_price: number
+          category: string | null
+          created_at: string
+          current_price: number
+          id: string
+          name: string
+          symbol: string | null
+          units: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_type?: string
+          avg_buy_price?: number
+          category?: string | null
+          created_at?: string
+          current_price?: number
+          id?: string
+          name: string
+          symbol?: string | null
+          units?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_type?: string
+          avg_buy_price?: number
+          category?: string | null
+          created_at?: string
+          current_price?: number
+          id?: string
+          name?: string
+          symbol?: string | null
+          units?: number
           updated_at?: string
           user_id?: string
         }

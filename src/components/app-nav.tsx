@@ -1,6 +1,16 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Map, CreditCard, Target, TrendingUp, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Map,
+  CreditCard,
+  Target,
+  TrendingUp,
+  LineChart,
+  ListChecks,
+  Briefcase,
+  LogOut,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -8,9 +18,12 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { to: "/blueprints", label: "Blueprints", icon: Map },
   { to: "/spending", label: "Spending", icon: CreditCard },
+  { to: "/advisor", label: "Advisor", icon: Briefcase },
+  { to: "/blueprints", label: "Blueprints", icon: Map },
+  { to: "/projections", label: "Projections", icon: LineChart },
   { to: "/goals", label: "Goals", icon: Target },
+  { to: "/playbook", label: "Playbook", icon: ListChecks },
 ] as const;
 
 export function AppNav({ displayName }: { displayName?: string }) {

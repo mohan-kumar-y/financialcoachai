@@ -1,113 +1,55 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { SiteHeader } from "@/components/site-header";
 import { AuroraBackground } from "@/components/aurora-background";
-import { AnimatedCounter } from "@/components/animated-counter";
-import { formatINR } from "@/lib/blueprints";
+import { buildBlueprint, formatINR, GALLERY } from "@/lib/blueprints";
+import { fadeUp } from "@/lib/motion";
 import {
   ArrowRight,
-  TrendingUp,
-  PiggyBank,
-  Wallet,
-  Target,
   Sparkles,
-  Map,
   CreditCard,
-  ArrowUpRight,
-  ArrowDownRight,
+  Briefcase,
+  Target,
+  LayoutDashboard,
+  Flame,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "WealthOS — Build Wealth with AI-Powered Financial Blueprints" },
+      { title: "WealthOS — Your Financial Operating System" },
       {
         name: "description",
         content:
-          "Get personalized AI money plans, track investments & net worth, manage spending and achieve your financial goals — all in one premium fintech dashboard.",
+          "Know exactly how much to spend, how much to invest, and how fast you'll build wealth. AI financial blueprints, spending tracker, goal planner and FIRE calculator in one premium dashboard.",
       },
-      { property: "og:title", content: "WealthOS — AI-Powered Financial Blueprints" },
+      { property: "og:title", content: "WealthOS — Your Financial Operating System" },
       {
         property: "og:description",
-        content:
-          "Personalized money plans, investment tracking, spending insights and goal planning powered by AI.",
+        content: "AI money blueprints, spending tracker, goal planner and FIRE calculator — all in one.",
       },
     ],
   }),
   component: Landing,
 });
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: (i = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
-  }),
-};
-
-const KPIS = [
-  { label: "Net Worth", value: 4850000, icon: Wallet, trend: "+12.4%", up: true, color: "#22c55e" },
-  { label: "Monthly Savings", value: 62000, icon: PiggyBank, trend: "+8.1%", up: true, color: "#0f8b8d" },
-  { label: "Investments", value: 2940000, icon: TrendingUp, trend: "+18.6%", up: true, color: "#6366f1" },
-  { label: "Goals Progress", value: 68, icon: Target, trend: "-2.3%", up: false, color: "#f59e0b", suffix: "%" },
-];
-
-const ACTIONS = [
-  {
-    featured: true,
-    badge: "Most Popular",
-    emoji: "🗺️",
-    icon: Map,
-    title: "Browse Financial Blueprints",
-    desc: "Explore AI-generated money plans for your income level and lifestyle.",
-    cta: "View Blueprints",
-    to: "/blueprints" as const,
-    gradient: "linear-gradient(135deg, #0b6b6f, #22c55e)",
-  },
-  {
-    emoji: "✨",
-    icon: Sparkles,
-    title: "Build My Personal Finance Plan",
-    desc: "Get a personalized AI blueprint based on your income, goals and lifestyle.",
-    cta: "Create My Plan",
-    to: "/blueprints" as const,
-    gradient: "linear-gradient(135deg, #6366f1, #0f8b8d)",
-  },
-  {
-    emoji: "📈",
-    icon: TrendingUp,
-    title: "Track Investments & Net Worth",
-    desc: "See all your investments, gains and total net worth in one place.",
-    cta: "Track Wealth",
-    to: "/dashboard" as const,
-    gradient: "linear-gradient(135deg, #0f8b8d, #22c55e)",
-  },
-  {
-    emoji: "💳",
-    icon: CreditCard,
-    title: "Understand My Spending",
-    desc: "Auto-track expenses from Gmail, SMS and UPI in one clean view.",
-    cta: "Connect & Track",
-    to: "/spending" as const,
-    gradient: "linear-gradient(135deg, #f59e0b, #ec4899)",
-  },
-  {
-    emoji: "🎯",
-    icon: Target,
-    title: "Plan My Financial Goals",
-    desc: "House, Car, Retirement, FIRE and more — visualized with progress rings.",
-    cta: "Set Goals",
-    to: "/goals" as const,
-    gradient: "linear-gradient(135deg, #ec4899, #6366f1)",
-  },
+const FEATURES = [
+  { icon: Sparkles, title: "AI Financial Blueprint", desc: "Personalized money plans that tell you exactly where every rupee should go.", color: "#22c55e" },
+  { icon: CreditCard, title: "Spending Tracker", desc: "Track expenses against your blueprint with AI insights and alerts.", color: "#f59e0b" },
+  { icon: Target, title: "Goal Planner", desc: "House, car, retirement, FIRE — visualized with live progress rings.", color: "#ec4899" },
+  { icon: Briefcase, title: "Wealth Advisor", desc: "Portfolio health, diversification scores and AI rebalancing actions.", color: "#6366f1" },
+  { icon: LayoutDashboard, title: "Wealth Dashboard", desc: "Net worth, savings rate and financial health in one command center.", color: "#0f8b8d" },
+  { icon: Flame, title: "FIRE Calculator", desc: "See your financial-independence age with step-up SIP projections.", color: "#0b6b6f" },
 ];
 
 function Landing() {
   const navigate = useNavigate();
+  const [income, setIncome] = useState(100000);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -115,167 +57,211 @@ function Landing() {
     });
   }, [navigate]);
 
+  const slices = useMemo(() => buildBlueprint(income, "moderate"), [income]);
+  const chart = slices.map((s) => ({ name: s.label, value: s.pct, monthly: s.monthly, color: s.color }));
+
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader transparent />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-hero px-4 pb-28 pt-32 text-primary-foreground sm:px-6">
+      <section className="relative overflow-hidden bg-gradient-hero px-4 pb-20 pt-32 text-primary-foreground sm:px-6">
         <AuroraBackground />
-        <div className="relative mx-auto max-w-4xl text-center">
-          <motion.span
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/25 bg-white/5 px-4 py-1.5 text-xs font-medium backdrop-blur"
-          >
-            <Sparkles className="h-3.5 w-3.5" /> AI-powered financial operating system
-          </motion.span>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.05 }}
-            className="mt-6 font-display text-4xl font-extrabold leading-[1.1] sm:text-6xl"
-          >
-            Build Wealth with{" "}
-            <span className="text-gradient-gold">AI-Powered Financial Blueprints</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80"
-          >
-            Get personalized money plans, track investments, manage spending, and achieve your
-            financial goals — all in one beautifully simple dashboard.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.25 }}
-            className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
-          >
-            <Button asChild size="lg" variant="secondary" className="text-base">
-              <Link to="/auth">
-                Create My Plan <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-primary-foreground/30 bg-transparent text-base text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2">
+          <div>
+            <motion.span
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/25 bg-white/5 px-4 py-1.5 text-xs font-medium backdrop-blur"
             >
-              <Link to="/blueprints">Browse Blueprints</Link>
-            </Button>
+              <Sparkles className="h-3.5 w-3.5" /> AI-powered personal finance
+            </motion.span>
+            <motion.h1
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="mt-6 font-display text-4xl font-extrabold leading-[1.1] sm:text-6xl"
+            >
+              Your <span className="text-gradient-gold">Financial Operating System</span>
+            </motion.h1>
+            <motion.ul
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mt-6 space-y-2 text-lg text-primary-foreground/85"
+            >
+              <li>✓ How much to spend</li>
+              <li>✓ How much to invest</li>
+              <li>✓ How fast you'll build wealth</li>
+            </motion.ul>
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="mt-8 flex flex-col gap-3 sm:flex-row"
+            >
+              <Button asChild size="lg" variant="secondary" className="text-base">
+                <Link to="/auth">
+                  Create My Blueprint <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-primary-foreground/30 bg-transparent text-base text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              >
+                <Link to="/blueprints">Browse Income Blueprints</Link>
+              </Button>
+            </motion.div>
+          </div>
+
+          {/* Interactive income slider */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="glass-strong rounded-3xl p-6 text-foreground shadow-elevated"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Monthly income
+                </p>
+                <p className="font-display text-3xl font-extrabold">{formatINR(income, true)}</p>
+              </div>
+              <span className="rounded-full bg-primary/15 px-3 py-1 text-xs font-bold text-primary">
+                Live blueprint
+              </span>
+            </div>
+            <div className="mt-5">
+              <Slider
+                value={[income]}
+                min={25000}
+                max={500000}
+                step={5000}
+                onValueChange={([v]) => setIncome(v)}
+              />
+              <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                <span>₹25K</span>
+                <span>₹5L+</span>
+              </div>
+            </div>
+            <div className="mt-4 grid items-center gap-4 sm:grid-cols-[160px_1fr]">
+              <div className="relative h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={chart} dataKey="value" nameKey="name" innerRadius={48} outerRadius={70} paddingAngle={2} stroke="none">
+                      {chart.map((d) => (
+                        <Cell key={d.name} fill={d.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v: number, _n, item) => [
+                        `${v}% · ${formatINR((item?.payload as { monthly: number }).monthly, true)}`,
+                        (item?.payload as { name: string }).name,
+                      ]}
+                      contentStyle={tooltipStyle}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-1.5">
+                {slices.map((s) => (
+                  <div key={s.key} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} /> {s.label}
+                    </span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {s.pct}% · {formatINR(s.monthly, true)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Quick financial snapshot */}
-      <section className="mx-auto -mt-16 max-w-7xl px-4 sm:px-6">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {KPIS.map((kpi, i) => (
+      {/* Blueprint gallery */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
+        <div className="mx-auto mb-10 max-w-2xl text-center">
+          <h2 className="font-display text-3xl font-bold sm:text-4xl">Financial Blueprints for every income</h2>
+          <p className="mt-3 text-muted-foreground">
+            Browse pre-built money plans — no sign-up required.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {GALLERY.slice(0, 4).map((g, i) => (
             <motion.div
-              key={kpi.label}
+              key={g.id}
               custom={i}
               variants={fadeUp}
               initial="hidden"
               whileInView="show"
               viewport={{ once: true }}
-              className="glass-strong rounded-2xl p-5 shadow-elevated"
+              whileHover={{ y: -5 }}
             >
-              <div className="flex items-center justify-between">
-                <span
-                  className="grid h-10 w-10 place-items-center rounded-xl"
-                  style={{ background: kpi.color + "22", color: kpi.color }}
-                >
-                  <kpi.icon className="h-5 w-5" />
-                </span>
-                <span
-                  className={
-                    "flex items-center gap-0.5 text-xs font-semibold " +
-                    (kpi.up ? "text-emerald-500" : "text-destructive")
-                  }
-                >
-                  {kpi.up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                  {kpi.trend}
-                </span>
-              </div>
-              <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {kpi.label}
-              </p>
-              <p className="mt-1 font-display text-xl font-bold sm:text-2xl">
-                <AnimatedCounter
-                  value={kpi.value}
-                  format={(v) =>
-                    kpi.suffix
-                      ? `${Math.round(v)}${kpi.suffix}`
-                      : formatINR(v, true)
-                  }
+              <Link
+                to="/blueprints"
+                className="group relative block overflow-hidden rounded-3xl border border-border/60 bg-gradient-card p-6 shadow-soft transition-shadow hover:shadow-elevated"
+              >
+                <div
+                  className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-20 blur-2xl transition-opacity group-hover:opacity-40"
+                  style={{ background: g.accent }}
                 />
-              </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl">{g.emoji}</span>
+                  <span className="rounded-full px-3 py-1 text-xs font-bold" style={{ background: g.accent + "22", color: g.accent }}>
+                    {g.incomeLabel}
+                  </span>
+                </div>
+                <h3 className="mt-4 font-display text-lg font-bold">{g.title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{g.description}</p>
+              </Link>
             </motion.div>
           ))}
+        </div>
+        <div className="mt-8 text-center">
+          <Button asChild variant="outline">
+            <Link to="/blueprints">
+              See all blueprints <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </section>
 
-      {/* Main action center */}
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <h2 className="font-display text-3xl font-bold sm:text-4xl">Your money, one command center</h2>
-          <p className="mt-3 text-muted-foreground">
-            Five focused tools that take you from plan to portfolio to financial freedom.
-          </p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2">
-          {ACTIONS.map((a, i) => (
-            <motion.div
-              key={a.title}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              whileHover={{ y: -6 }}
-              className={
-                "group relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-card p-7 shadow-soft transition-shadow hover:shadow-elevated " +
-                (a.featured ? "md:col-span-2" : "")
-              }
-            >
-              <div
-                className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-20 blur-2xl transition-opacity group-hover:opacity-40"
-                style={{ background: a.gradient }}
-              />
-              {a.badge && (
-                <span className="absolute right-5 top-5 rounded-full bg-gradient-gold px-3 py-1 text-xs font-semibold text-gold-foreground shadow-soft">
-                  {a.badge}
-                </span>
-              )}
-              <div
-                className="grid h-14 w-14 place-items-center rounded-2xl text-3xl shadow-soft"
-                style={{ background: a.gradient }}
+      {/* Feature sections */}
+      <section className="bg-muted/40 px-4 py-20 sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-bold sm:text-4xl">Everything to run your money</h2>
+            <p className="mt-3 text-muted-foreground">Six tools that take you from plan to portfolio to freedom.</p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f, i) => (
+              <motion.div
+                key={f.title}
+                custom={i}
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+                className="rounded-3xl border border-border/60 bg-gradient-card p-6 shadow-soft"
               >
-                <span>{a.emoji}</span>
-              </div>
-              <h3 className="mt-5 font-display text-xl font-bold">{a.title}</h3>
-              <p className="mt-2 max-w-md text-sm text-muted-foreground">{a.desc}</p>
-              <Button asChild variant="ghost" className="mt-4 px-0 text-primary hover:bg-transparent">
-                <Link to={a.to}>
-                  {a.cta} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
-            </motion.div>
-          ))}
+                <span className="grid h-12 w-12 place-items-center rounded-2xl" style={{ background: f.color + "22", color: f.color }}>
+                  <f.icon className="h-6 w-6" />
+                </span>
+                <h3 className="mt-4 font-display text-lg font-bold">{f.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{f.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="px-4 pb-24 sm:px-6">
+      <section className="px-4 py-20 sm:px-6">
         <div className="relative mx-auto max-w-4xl overflow-hidden rounded-3xl bg-gradient-hero px-8 py-14 text-center text-primary-foreground shadow-elevated">
           <AuroraBackground />
           <div className="relative">
@@ -298,3 +284,11 @@ function Landing() {
     </div>
   );
 }
+
+const tooltipStyle = {
+  borderRadius: 12,
+  border: "1px solid var(--border)",
+  background: "var(--popover)",
+  color: "var(--popover-foreground)",
+  fontSize: 13,
+};
