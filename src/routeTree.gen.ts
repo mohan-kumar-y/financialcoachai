@@ -15,11 +15,19 @@ import { Route as BlueprintsRouteImport } from './routes/blueprints'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticated/spending'
+import { Route as AuthenticatedSignalsRouteImport } from './routes/_authenticated/signals'
+import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
 import { Route as AuthenticatedProjectionsRouteImport } from './routes/_authenticated/projections'
 import { Route as AuthenticatedPlaybookRouteImport } from './routes/_authenticated/playbook'
+import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
+import { Route as AuthenticatedFundsRouteImport } from './routes/_authenticated/funds'
+import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
+import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated/alerts'
 import { Route as AuthenticatedAdvisorRouteImport } from './routes/_authenticated/advisor'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -51,9 +59,24 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSpendingRoute = AuthenticatedSpendingRouteImport.update({
   id: '/spending',
   path: '/spending',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSignalsRoute = AuthenticatedSignalsRouteImport.update({
+  id: '/signals',
+  path: '/signals',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedResearchRoute = AuthenticatedResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProjectionsRoute =
@@ -67,14 +90,39 @@ const AuthenticatedPlaybookRoute = AuthenticatedPlaybookRouteImport.update({
   path: '/playbook',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHealthRoute = AuthenticatedHealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedGoalsRoute = AuthenticatedGoalsRouteImport.update({
   id: '/goals',
   path: '/goals',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFundsRoute = AuthenticatedFundsRouteImport.update({
+  id: '/funds',
+  path: '/funds',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDiscoverRoute = AuthenticatedDiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBriefRoute = AuthenticatedBriefRouteImport.update({
+  id: '/brief',
+  path: '/brief',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAlertsRoute = AuthenticatedAlertsRouteImport.update({
+  id: '/alerts',
+  path: '/alerts',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdvisorRoute = AuthenticatedAdvisorRouteImport.update({
@@ -90,11 +138,19 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/advisor': typeof AuthenticatedAdvisorRoute
+  '/alerts': typeof AuthenticatedAlertsRoute
+  '/brief': typeof AuthenticatedBriefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/discover': typeof AuthenticatedDiscoverRoute
+  '/funds': typeof AuthenticatedFundsRoute
   '/goals': typeof AuthenticatedGoalsRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
+  '/research': typeof AuthenticatedResearchRoute
+  '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
+  '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -103,11 +159,19 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/advisor': typeof AuthenticatedAdvisorRoute
+  '/alerts': typeof AuthenticatedAlertsRoute
+  '/brief': typeof AuthenticatedBriefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/discover': typeof AuthenticatedDiscoverRoute
+  '/funds': typeof AuthenticatedFundsRoute
   '/goals': typeof AuthenticatedGoalsRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
+  '/research': typeof AuthenticatedResearchRoute
+  '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
+  '/api/chat': typeof ApiChatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -118,11 +182,19 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/advisor': typeof AuthenticatedAdvisorRoute
+  '/_authenticated/alerts': typeof AuthenticatedAlertsRoute
+  '/_authenticated/brief': typeof AuthenticatedBriefRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
+  '/_authenticated/funds': typeof AuthenticatedFundsRoute
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
+  '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/playbook': typeof AuthenticatedPlaybookRoute
   '/_authenticated/projections': typeof AuthenticatedProjectionsRoute
+  '/_authenticated/research': typeof AuthenticatedResearchRoute
+  '/_authenticated/signals': typeof AuthenticatedSignalsRoute
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
+  '/api/chat': typeof ApiChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -133,11 +205,19 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/advisor'
+    | '/alerts'
+    | '/brief'
     | '/dashboard'
+    | '/discover'
+    | '/funds'
     | '/goals'
+    | '/health'
     | '/playbook'
     | '/projections'
+    | '/research'
+    | '/signals'
     | '/spending'
+    | '/api/chat'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -146,11 +226,19 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/advisor'
+    | '/alerts'
+    | '/brief'
     | '/dashboard'
+    | '/discover'
+    | '/funds'
     | '/goals'
+    | '/health'
     | '/playbook'
     | '/projections'
+    | '/research'
+    | '/signals'
     | '/spending'
+    | '/api/chat'
   id:
     | '__root__'
     | '/'
@@ -160,11 +248,19 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/_authenticated/advisor'
+    | '/_authenticated/alerts'
+    | '/_authenticated/brief'
     | '/_authenticated/dashboard'
+    | '/_authenticated/discover'
+    | '/_authenticated/funds'
     | '/_authenticated/goals'
+    | '/_authenticated/health'
     | '/_authenticated/playbook'
     | '/_authenticated/projections'
+    | '/_authenticated/research'
+    | '/_authenticated/signals'
     | '/_authenticated/spending'
+    | '/api/chat'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -174,6 +270,7 @@ export interface RootRouteChildren {
   BlueprintsRoute: typeof BlueprintsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiChatRoute: typeof ApiChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -220,11 +317,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/spending': {
       id: '/_authenticated/spending'
       path: '/spending'
       fullPath: '/spending'
       preLoaderRoute: typeof AuthenticatedSpendingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/signals': {
+      id: '/_authenticated/signals'
+      path: '/signals'
+      fullPath: '/signals'
+      preLoaderRoute: typeof AuthenticatedSignalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/research': {
+      id: '/_authenticated/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof AuthenticatedResearchRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/projections': {
@@ -241,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlaybookRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/health': {
+      id: '/_authenticated/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof AuthenticatedHealthRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/goals': {
       id: '/_authenticated/goals'
       path: '/goals'
@@ -248,11 +373,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGoalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/funds': {
+      id: '/_authenticated/funds'
+      path: '/funds'
+      fullPath: '/funds'
+      preLoaderRoute: typeof AuthenticatedFundsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/discover': {
+      id: '/_authenticated/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof AuthenticatedDiscoverRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/brief': {
+      id: '/_authenticated/brief'
+      path: '/brief'
+      fullPath: '/brief'
+      preLoaderRoute: typeof AuthenticatedBriefRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/alerts': {
+      id: '/_authenticated/alerts'
+      path: '/alerts'
+      fullPath: '/alerts'
+      preLoaderRoute: typeof AuthenticatedAlertsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/advisor': {
@@ -267,19 +420,33 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdvisorRoute: typeof AuthenticatedAdvisorRoute
+  AuthenticatedAlertsRoute: typeof AuthenticatedAlertsRoute
+  AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
+  AuthenticatedFundsRoute: typeof AuthenticatedFundsRoute
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
+  AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedPlaybookRoute: typeof AuthenticatedPlaybookRoute
   AuthenticatedProjectionsRoute: typeof AuthenticatedProjectionsRoute
+  AuthenticatedResearchRoute: typeof AuthenticatedResearchRoute
+  AuthenticatedSignalsRoute: typeof AuthenticatedSignalsRoute
   AuthenticatedSpendingRoute: typeof AuthenticatedSpendingRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdvisorRoute: AuthenticatedAdvisorRoute,
+  AuthenticatedAlertsRoute: AuthenticatedAlertsRoute,
+  AuthenticatedBriefRoute: AuthenticatedBriefRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
+  AuthenticatedFundsRoute: AuthenticatedFundsRoute,
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
+  AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedPlaybookRoute: AuthenticatedPlaybookRoute,
   AuthenticatedProjectionsRoute: AuthenticatedProjectionsRoute,
+  AuthenticatedResearchRoute: AuthenticatedResearchRoute,
+  AuthenticatedSignalsRoute: AuthenticatedSignalsRoute,
   AuthenticatedSpendingRoute: AuthenticatedSpendingRoute,
 }
 
@@ -293,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlueprintsRoute: BlueprintsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiChatRoute: ApiChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

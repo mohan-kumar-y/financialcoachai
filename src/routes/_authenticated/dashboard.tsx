@@ -38,6 +38,7 @@ import {
 } from "@/lib/spending";
 import { formatINR } from "@/lib/blueprints";
 import { fadeUp } from "@/lib/motion";
+import { WealthModules } from "@/components/wealth/modules";
 import {
   Wallet,
   TrendingUp,
@@ -415,6 +416,8 @@ function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        <WealthModules />
       </main>
     </div>
   );
