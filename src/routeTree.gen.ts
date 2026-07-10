@@ -23,6 +23,7 @@ import { Route as AuthenticatedProjectionsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedPlaybookRouteImport } from './routes/_authenticated/playbook'
 import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
+import { Route as AuthenticatedFundsRouteImport } from './routes/_authenticated/funds'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
@@ -99,6 +100,11 @@ const AuthenticatedGoalsRoute = AuthenticatedGoalsRouteImport.update({
   path: '/goals',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFundsRoute = AuthenticatedFundsRouteImport.update({
+  id: '/funds',
+  path: '/funds',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDiscoverRoute = AuthenticatedDiscoverRouteImport.update({
   id: '/discover',
   path: '/discover',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/brief': typeof AuthenticatedBriefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/discover': typeof AuthenticatedDiscoverRoute
+  '/funds': typeof AuthenticatedFundsRoute
   '/goals': typeof AuthenticatedGoalsRoute
   '/health': typeof AuthenticatedHealthRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/brief': typeof AuthenticatedBriefRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/discover': typeof AuthenticatedDiscoverRoute
+  '/funds': typeof AuthenticatedFundsRoute
   '/goals': typeof AuthenticatedGoalsRoute
   '/health': typeof AuthenticatedHealthRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/_authenticated/brief': typeof AuthenticatedBriefRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
+  '/_authenticated/funds': typeof AuthenticatedFundsRoute
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
   '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/playbook': typeof AuthenticatedPlaybookRoute
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
     | '/brief'
     | '/dashboard'
     | '/discover'
+    | '/funds'
     | '/goals'
     | '/health'
     | '/playbook'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/brief'
     | '/dashboard'
     | '/discover'
+    | '/funds'
     | '/goals'
     | '/health'
     | '/playbook'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/_authenticated/brief'
     | '/_authenticated/dashboard'
     | '/_authenticated/discover'
+    | '/_authenticated/funds'
     | '/_authenticated/goals'
     | '/_authenticated/health'
     | '/_authenticated/playbook'
@@ -361,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGoalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/funds': {
+      id: '/_authenticated/funds'
+      path: '/funds'
+      fullPath: '/funds'
+      preLoaderRoute: typeof AuthenticatedFundsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/discover': {
       id: '/_authenticated/discover'
       path: '/discover'
@@ -405,6 +424,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBriefRoute: typeof AuthenticatedBriefRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
+  AuthenticatedFundsRoute: typeof AuthenticatedFundsRoute
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
   AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedPlaybookRoute: typeof AuthenticatedPlaybookRoute
@@ -420,6 +440,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBriefRoute: AuthenticatedBriefRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
+  AuthenticatedFundsRoute: AuthenticatedFundsRoute,
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
   AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedPlaybookRoute: AuthenticatedPlaybookRoute,
