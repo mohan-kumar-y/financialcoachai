@@ -416,6 +416,8 @@ function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        <WealthModules />
       </main>
     </div>
   );
