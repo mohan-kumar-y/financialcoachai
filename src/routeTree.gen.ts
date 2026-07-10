@@ -17,6 +17,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticated/spending'
+import { Route as AuthenticatedSignalsRouteImport } from './routes/_authenticated/signals'
 import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
 import { Route as AuthenticatedProjectionsRouteImport } from './routes/_authenticated/projections'
 import { Route as AuthenticatedPlaybookRouteImport } from './routes/_authenticated/playbook'
@@ -64,6 +65,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
 const AuthenticatedSpendingRoute = AuthenticatedSpendingRouteImport.update({
   id: '/spending',
   path: '/spending',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSignalsRoute = AuthenticatedSignalsRouteImport.update({
+  id: '/signals',
+  path: '/signals',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedResearchRoute = AuthenticatedResearchRouteImport.update({
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
   '/research': typeof AuthenticatedResearchRoute
+  '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
 }
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
   '/research': typeof AuthenticatedResearchRoute
+  '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
 }
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/_authenticated/playbook': typeof AuthenticatedPlaybookRoute
   '/_authenticated/projections': typeof AuthenticatedProjectionsRoute
   '/_authenticated/research': typeof AuthenticatedResearchRoute
+  '/_authenticated/signals': typeof AuthenticatedSignalsRoute
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
 }
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/playbook'
     | '/projections'
     | '/research'
+    | '/signals'
     | '/spending'
     | '/api/chat'
   fileRoutesByTo: FileRoutesByTo
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/playbook'
     | '/projections'
     | '/research'
+    | '/signals'
     | '/spending'
     | '/api/chat'
   id:
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/_authenticated/playbook'
     | '/_authenticated/projections'
     | '/_authenticated/research'
+    | '/_authenticated/signals'
     | '/_authenticated/spending'
     | '/api/chat'
   fileRoutesById: FileRoutesById
@@ -293,6 +305,13 @@ declare module '@tanstack/react-router' {
       path: '/spending'
       fullPath: '/spending'
       preLoaderRoute: typeof AuthenticatedSpendingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/signals': {
+      id: '/_authenticated/signals'
+      path: '/signals'
+      fullPath: '/signals'
+      preLoaderRoute: typeof AuthenticatedSignalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/research': {
@@ -371,6 +390,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlaybookRoute: typeof AuthenticatedPlaybookRoute
   AuthenticatedProjectionsRoute: typeof AuthenticatedProjectionsRoute
   AuthenticatedResearchRoute: typeof AuthenticatedResearchRoute
+  AuthenticatedSignalsRoute: typeof AuthenticatedSignalsRoute
   AuthenticatedSpendingRoute: typeof AuthenticatedSpendingRoute
 }
 
@@ -384,6 +404,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlaybookRoute: AuthenticatedPlaybookRoute,
   AuthenticatedProjectionsRoute: AuthenticatedProjectionsRoute,
   AuthenticatedResearchRoute: AuthenticatedResearchRoute,
+  AuthenticatedSignalsRoute: AuthenticatedSignalsRoute,
   AuthenticatedSpendingRoute: AuthenticatedSpendingRoute,
 }
 
