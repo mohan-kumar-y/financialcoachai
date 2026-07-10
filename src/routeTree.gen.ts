@@ -21,6 +21,7 @@ import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedProjectionsRouteImport } from './routes/_authenticated/projections'
 import { Route as AuthenticatedPlaybookRouteImport } from './routes/_authenticated/playbook'
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
+import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdvisorRouteImport } from './routes/_authenticated/advisor'
 
@@ -84,6 +85,11 @@ const AuthenticatedGoalsRoute = AuthenticatedGoalsRouteImport.update({
   path: '/goals',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDiscoverRoute = AuthenticatedDiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/advisor': typeof AuthenticatedAdvisorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/discover': typeof AuthenticatedDiscoverRoute
   '/goals': typeof AuthenticatedGoalsRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/advisor': typeof AuthenticatedAdvisorRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/discover': typeof AuthenticatedDiscoverRoute
   '/goals': typeof AuthenticatedGoalsRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/advisor': typeof AuthenticatedAdvisorRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
   '/_authenticated/playbook': typeof AuthenticatedPlaybookRoute
   '/_authenticated/projections': typeof AuthenticatedProjectionsRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/advisor'
     | '/dashboard'
+    | '/discover'
     | '/goals'
     | '/playbook'
     | '/projections'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/advisor'
     | '/dashboard'
+    | '/discover'
     | '/goals'
     | '/playbook'
     | '/projections'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/_authenticated/advisor'
     | '/_authenticated/dashboard'
+    | '/_authenticated/discover'
     | '/_authenticated/goals'
     | '/_authenticated/playbook'
     | '/_authenticated/projections'
@@ -287,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGoalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/discover': {
+      id: '/_authenticated/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof AuthenticatedDiscoverRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -307,6 +326,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdvisorRoute: typeof AuthenticatedAdvisorRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
   AuthenticatedPlaybookRoute: typeof AuthenticatedPlaybookRoute
   AuthenticatedProjectionsRoute: typeof AuthenticatedProjectionsRoute
@@ -317,6 +337,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdvisorRoute: AuthenticatedAdvisorRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
   AuthenticatedPlaybookRoute: AuthenticatedPlaybookRoute,
   AuthenticatedProjectionsRoute: AuthenticatedProjectionsRoute,
