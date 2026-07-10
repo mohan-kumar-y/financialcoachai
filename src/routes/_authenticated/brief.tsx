@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { analyzePortfolio } from "@/lib/advisor";
 import { listHoldings } from "@/lib/holdings.functions";
 import { getMyPlan } from "@/lib/plan.functions";
-import { buildDailyBrief, MARKET_INDICES } from "@/lib/market";
-import { MARKET_INDICES as _idx } from "@/lib/advisor";
+import { buildDailyBrief } from "@/lib/market";
+import { MARKET_INDICES } from "@/lib/advisor";
 import {
   Newspaper,
   Sun,
