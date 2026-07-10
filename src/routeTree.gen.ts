@@ -20,6 +20,7 @@ import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
 import { Route as AuthenticatedProjectionsRouteImport } from './routes/_authenticated/projections'
 import { Route as AuthenticatedPlaybookRouteImport } from './routes/_authenticated/playbook'
+import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
 import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -80,6 +81,11 @@ const AuthenticatedPlaybookRoute = AuthenticatedPlaybookRouteImport.update({
   path: '/playbook',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHealthRoute = AuthenticatedHealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedGoalsRoute = AuthenticatedGoalsRouteImport.update({
   id: '/goals',
   path: '/goals',
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/goals': typeof AuthenticatedGoalsRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
   '/research': typeof AuthenticatedResearchRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/goals': typeof AuthenticatedGoalsRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
   '/research': typeof AuthenticatedResearchRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/goals': typeof AuthenticatedGoalsRoute
+  '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/playbook': typeof AuthenticatedPlaybookRoute
   '/_authenticated/projections': typeof AuthenticatedProjectionsRoute
   '/_authenticated/research': typeof AuthenticatedResearchRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/discover'
     | '/goals'
+    | '/health'
     | '/playbook'
     | '/projections'
     | '/research'
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/discover'
     | '/goals'
+    | '/health'
     | '/playbook'
     | '/projections'
     | '/research'
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/discover'
     | '/_authenticated/goals'
+    | '/_authenticated/health'
     | '/_authenticated/playbook'
     | '/_authenticated/projections'
     | '/_authenticated/research'
@@ -292,6 +304,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlaybookRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/health': {
+      id: '/_authenticated/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof AuthenticatedHealthRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/goals': {
       id: '/_authenticated/goals'
       path: '/goals'
@@ -328,6 +347,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
   AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
+  AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedPlaybookRoute: typeof AuthenticatedPlaybookRoute
   AuthenticatedProjectionsRoute: typeof AuthenticatedProjectionsRoute
   AuthenticatedResearchRoute: typeof AuthenticatedResearchRoute
@@ -339,6 +359,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
   AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
+  AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedPlaybookRoute: AuthenticatedPlaybookRoute,
   AuthenticatedProjectionsRoute: AuthenticatedProjectionsRoute,
   AuthenticatedResearchRoute: AuthenticatedResearchRoute,

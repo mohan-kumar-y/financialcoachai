@@ -188,7 +188,7 @@ function ScoreCard({
   label: string;
   value: number;
   color: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   good: "high" | "low";
 }) {
   const rating =
