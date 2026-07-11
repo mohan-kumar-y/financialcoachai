@@ -29,7 +29,6 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
 import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated/alerts'
 import { Route as AuthenticatedAdvisorRouteImport } from './routes/_authenticated/advisor'
-import { Route as ApiPublicProbeRouteImport } from './routes/api/public/probe'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -131,11 +130,6 @@ const AuthenticatedAdvisorRoute = AuthenticatedAdvisorRouteImport.update({
   path: '/advisor',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiPublicProbeRoute = ApiPublicProbeRouteImport.update({
-  id: '/api/public/probe',
-  path: '/api/public/probe',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -157,7 +151,6 @@ export interface FileRoutesByFullPath {
   '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
-  '/api/public/probe': typeof ApiPublicProbeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -179,7 +172,6 @@ export interface FileRoutesByTo {
   '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
-  '/api/public/probe': typeof ApiPublicProbeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -203,7 +195,6 @@ export interface FileRoutesById {
   '/_authenticated/signals': typeof AuthenticatedSignalsRoute
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
-  '/api/public/probe': typeof ApiPublicProbeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -227,7 +218,6 @@ export interface FileRouteTypes {
     | '/signals'
     | '/spending'
     | '/api/chat'
-    | '/api/public/probe'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -249,7 +239,6 @@ export interface FileRouteTypes {
     | '/signals'
     | '/spending'
     | '/api/chat'
-    | '/api/public/probe'
   id:
     | '__root__'
     | '/'
@@ -272,7 +261,6 @@ export interface FileRouteTypes {
     | '/_authenticated/signals'
     | '/_authenticated/spending'
     | '/api/chat'
-    | '/api/public/probe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -283,7 +271,6 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiChatRoute: typeof ApiChatRoute
-  ApiPublicProbeRoute: typeof ApiPublicProbeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -428,13 +415,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdvisorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/public/probe': {
-      id: '/api/public/probe'
-      path: '/api/public/probe'
-      fullPath: '/api/public/probe'
-      preLoaderRoute: typeof ApiPublicProbeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -481,7 +461,6 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiChatRoute: ApiChatRoute,
-  ApiPublicProbeRoute: ApiPublicProbeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
