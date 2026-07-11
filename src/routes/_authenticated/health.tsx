@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -15,35 +15,80 @@ import {
   CartesianGrid,
 } from "recharts";
 import { AppNav } from "@/components/app-nav";
-import { PageHeader, StatCard, SeverityBadge, LiveDataNote, chartTooltip } from "@/components/wealth/kit";
+import { PageHeader, StatCard, SeverityBadge, chartTooltip } from "@/components/wealth/kit";
+import { DataStatus } from "@/components/wealth/data-status";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link } from "@tanstack/react-router";
 import { ProgressRing } from "@/components/progress-ring";
 import { analyzePortfolio } from "@/lib/advisor";
 import { listHoldings } from "@/lib/holdings.functions";
 import { getMyPlan } from "@/lib/plan.functions";
-import { analyzeHealth, MARKET_CAP_TARGET, formatINRc, type CapTier } from "@/lib/market";
-import { Activity, ShieldCheck, Gauge, Sparkles, PieChart as PieIcon, Layers } from "lucide-react";
+import { getQuotes } from "@/lib/market-data.functions";
+import { analyzeHealthLive, MARKET_CAP_TARGET, type CapTier } from "@/lib/portfolio-health";
+import { formatINRc } from "@/lib/market";
+import type { DataMeta, StockFundamentals } from "@/lib/market-data";
+import { Activity, ShieldCheck, Gauge, Sparkles, PieChart as PieIcon, Layers, TrendingDown, Wrench } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/health")({
   component: HealthPage,
 });
 
-const SECTOR_COLORS = ["#6366f1", "#22c55e", "#0f8b8d", "#f59e0b", "#ec4899", "#8b5cf6", "#0ea5e9", "#ef4444", "#14b8a6"];
+const SECTOR_COLORS = ["#6366f1", "#22c55e", "#0f8b8d", "#f59e0b", "#ec4899", "#8b5cf6", "#0ea5e9", "#ef4444", "#14b8a6", "#94a3b8"];
 
 function HealthPage() {
   const fetchHoldings = useServerFn(listHoldings);
   const fetchPlan = useServerFn(getMyPlan);
+  const fetchQuotes = useServerFn(getQuotes);
   const { data: planData } = useQuery({ queryKey: ["my-plan"], queryFn: () => fetchPlan() });
   const { data: holdData, isLoading } = useQuery({ queryKey: ["holdings"], queryFn: () => fetchHoldings() });
 
   const holdings = holdData?.holdings ?? [];
-  const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
-  const health = useMemo(
-    () => analyzeHealth(portfolio.holdings, portfolio.diversificationScore),
-    [portfolio],
+  const stockSymbols = useMemo(
+    () =>
+      Array.from(
+        new Set(holdings.filter((h) => h.asset_type === "stock").map((h) => (h.symbol ?? h.name).trim()).filter(Boolean)),
+      ),
+    [holdings],
   );
+
+  const { data: quotesData, isLoading: quotesLoading } = useQuery({
+    queryKey: ["quotes", stockSymbols],
+    queryFn: () => fetchQuotes({ data: { symbols: stockSymbols } }),
+    enabled: stockSymbols.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const fundMap = useMemo(() => {
+    const m: Record<string, StockFundamentals | undefined> = {};
+    if (quotesData) for (const [k, v] of Object.entries(quotesData)) m[k] = v.fundamentals;
+    return m;
+  }, [quotesData]);
+
+  // Refresh stock current prices with live CMP where available.
+  const liveHoldings = useMemo(
+    () =>
+      holdings.map((h) => {
+        if (h.asset_type !== "stock") return h;
+        const f = fundMap[(h.symbol ?? h.name).trim()];
+        return f && f.cmp !== null ? { ...h, current_price: f.cmp } : h;
+      }),
+    [holdings, fundMap],
+  );
+
+  const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
+  const health = useMemo(
+    () => analyzeHealthLive(portfolio.holdings, portfolio.diversificationScore, fundMap),
+    [portfolio, fundMap],
+  );
+
+  const dataMeta: DataMeta = useMemo(() => {
+    const metas = quotesData ? Object.values(quotesData).map((q) => q.meta) : [];
+    if (metas.length === 0) return { source: "indianapi.in", fetchedAt: null, status: "unavailable" };
+    const anyOk = metas.find((m) => m.status === "ok");
+    const anyStale = metas.find((m) => m.status === "stale");
+    const latest = metas.map((m) => m.fetchedAt).filter(Boolean).sort().pop() ?? null;
+    return { source: "indianapi.in", fetchedAt: latest, status: anyOk ? "ok" : anyStale ? "stale" : "unavailable" };
+  }, [quotesData]);
 
   const empty = !isLoading && holdings.length === 0;
 
@@ -54,7 +99,8 @@ function HealthPage() {
         <PageHeader
           icon={Activity}
           title="Portfolio Health Dashboard"
-          subtitle="Diversification, sector & market-cap allocation, risk and overall portfolio quality — with concentration warnings."
+          subtitle="Diversification, sector & market-cap allocation, risk and overall portfolio quality — computed from your actual holdings and live fundamentals."
+          actions={stockSymbols.length > 0 ? <DataStatus meta={dataMeta} /> : undefined}
         />
 
         {empty ? (
@@ -81,7 +127,7 @@ function HealthPage() {
               <StatCard
                 label="Portfolio Value"
                 value={formatINRc(portfolio.current)}
-                hint={`${portfolio.holdings.length} holdings`}
+                hint={`${portfolio.holdings.length} holdings · ${health.coveragePct}% live-classified`}
                 icon={Layers}
                 color="#22c55e"
                 trend={portfolio.pnlPct}
@@ -132,7 +178,11 @@ function HealthPage() {
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
-                        data={health.byCap.map((c) => ({ name: c.name, Actual: c.pct, Target: MARKET_CAP_TARGET[c.name as CapTier] }))}
+                        data={health.byCap.map((c) => ({
+                          name: c.name.replace(" Cap", ""),
+                          Actual: c.pct,
+                          Target: MARKET_CAP_TARGET[c.name as Exclude<CapTier, "Unclassified">] ?? 0,
+                        }))}
                         margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -145,34 +195,79 @@ function HealthPage() {
                     </ResponsiveContainer>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Actual vs a balanced target mix (60% Large / 25% Mid / 15% Small).
+                    Cap tiers classified from live market cap (Large ≥ ₹20k Cr · Mid ≥ ₹5k Cr · Small &lt; ₹5k Cr) vs a balanced 60/25/15 target.
                   </p>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Gauge className="h-5 w-5 text-primary" /> Concentration & Risk Warnings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2.5">
-                {health.warnings.map((w, i) => (
-                  <div key={i} className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3">
-                    <SeverityBadge severity={w.level} />
-                    <span className="text-sm">{w.text}</span>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card className="shadow-soft">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Gauge className="h-5 w-5 text-primary" /> Concentration & Risk Warnings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2.5">
+                  {health.warnings.map((w, i) => (
+                    <div key={i} className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3">
+                      <SeverityBadge severity={w.level} />
+                      <span className="text-sm">{w.text}</span>
+                    </div>
+                  ))}
+                  <div className="pt-1">
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Top holdings</p>
+                    {health.concentration.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between text-sm">
+                        <span>{c.name}</span>
+                        <span className="tabular-nums text-muted-foreground">{c.pct}%</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-soft">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Wrench className="h-5 w-5 text-primary" /> Weaknesses & Suggested Improvements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-destructive">
+                      <TrendingDown className="h-3.5 w-3.5" /> Weaknesses
+                    </p>
+                    <ul className="space-y-1.5 text-sm">
+                      {health.weaknesses.length === 0 && <li className="text-muted-foreground">None detected.</li>}
+                      {health.weaknesses.map((w, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                          <span>{w}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-600">Suggested improvements</p>
+                    <ul className="space-y-1.5 text-sm">
+                      {health.improvements.map((w, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                          <span>{w}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {quotesLoading && (
+              <p className="text-center text-xs text-muted-foreground">Refreshing live fundamentals…</p>
+            )}
           </>
         )}
-
-        <LiveDataNote>
-          <strong>Connect later:</strong> sector, market-cap and risk classifications are matched from sample metadata. Wire a
-          securities master + fundamentals feed for exact classifications.
-        </LiveDataNote>
       </main>
     </div>
   );
