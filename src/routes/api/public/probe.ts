@@ -1,37 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { rawProvider } from "@/lib/market-data.server";
 
-// TEMPORARY probe route to inspect the live provider response shape. Delete after use.
+// TEMPORARY diagnostic route. Delete after use.
 export const Route = createFileRoute("/api/public/probe")({
   server: {
     handlers: {
       GET: async ({ request }) => {
         const url = new URL(request.url);
         const name = url.searchParams.get("name") ?? "TCS";
-        try {
-          const data = (await rawProvider(`/stock?name=${encodeURIComponent(name)}`)) as Record<string, unknown>;
-          const cp = data.companyProfile as Record<string, unknown> | undefined;
-          const peers = (cp?.peerCompanyList as unknown[]) ?? [];
-          const fin = data.financials as unknown[] | undefined;
-          const finItem = Array.isArray(fin) ? fin[0] : fin;
-          return Response.json({
-            topKeys: Object.keys(data),
-            currentPrice: data.currentPrice,
-            percentChange: data.percentChange,
-            yearHigh: data.yearHigh,
-            yearLow: data.yearLow,
-            companyProfileKeys: cp ? Object.keys(cp) : null,
-            peerSample: peers[0] ?? null,
-            peerKeys: peers[0] ? Object.keys(peers[0] as object) : null,
-            keyMetrics: data.keyMetrics,
-            financialFirst: finItem ? JSON.stringify(finItem).slice(0, 1500) : null,
-            recentNewsSample: Array.isArray(data.recentNews) ? (data.recentNews as unknown[]).slice(0, 2) : data.recentNews,
-            analystView: data.analystView,
-            recosBar: data.recosBar,
-          });
-        } catch (e) {
-          return Response.json({ error: String(e) }, { status: 500 });
+        const key = process.env.INDIAN_STOCK_API_KEY ?? "";
+        const base = "https://stock.indianapi.in";
+        const path = `/stock?name=${encodeURIComponent(name)}`;
+
+        const attempts: Record<string, unknown> = {
+          keyPresent: key.length > 0,
+          keyLength: key.length,
+          keyPrefix: key.slice(0, 4),
+        };
+
+        async function tryHeaders(label: string, headers: Record<string, string>) {
+          try {
+            const res = await fetch(`${base}${path}`, { headers });
+            attempts[label] = { status: res.status, body: (await res.text()).slice(0, 120) };
+          } catch (e) {
+            attempts[label] = { error: String(e) };
+          }
         }
+
+        await tryHeaders("x-api-key", { "x-api-key": key, accept: "application/json" });
+        await tryHeaders("X-Api-Key", { "X-Api-Key": key, accept: "application/json" });
+        await tryHeaders("bearer", { Authorization: `Bearer ${key}`, accept: "application/json" });
+
+        return Response.json(attempts);
       },
     },
   },
