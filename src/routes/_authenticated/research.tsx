@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProgressRing } from "@/components/progress-ring";
+import { DataStatus, DataUnavailable } from "@/components/wealth/data-status";
+import { fmtCr, fmtNum, fmtPrice } from "@/lib/market-data";
 import { deepResearch, type ResearchReport } from "@/lib/research.functions";
 import {
   MessagesSquare,
