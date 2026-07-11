@@ -63,7 +63,9 @@ export type Database = {
           current_sip: number
           emergency_months: number
           id: string
+          investment_horizon_years: number
           monthly_expenses: number
+          risk_appetite: string
           sip_step_up_pct: number
           updated_at: string
           user_id: string
@@ -77,7 +79,9 @@ export type Database = {
           current_sip?: number
           emergency_months?: number
           id?: string
+          investment_horizon_years?: number
           monthly_expenses?: number
+          risk_appetite?: string
           sip_step_up_pct?: number
           updated_at?: string
           user_id: string
@@ -91,7 +95,9 @@ export type Database = {
           current_sip?: number
           emergency_months?: number
           id?: string
+          investment_horizon_years?: number
           monthly_expenses?: number
+          risk_appetite?: string
           sip_step_up_pct?: number
           updated_at?: string
           user_id?: string
@@ -140,6 +146,33 @@ export type Database = {
         }
         Relationships: []
       }
+      market_cache: {
+        Row: {
+          cache_key: string
+          endpoint: string
+          fetched_at: string
+          payload: Json
+          source: string
+          status: string
+        }
+        Insert: {
+          cache_key: string
+          endpoint: string
+          fetched_at?: string
+          payload: Json
+          source?: string
+          status?: string
+        }
+        Update: {
+          cache_key?: string
+          endpoint?: string
+          fetched_at?: string
+          payload?: Json
+          source?: string
+          status?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -158,6 +191,30 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      watchlist: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          symbol?: string
+          user_id?: string
         }
         Relationships: []
       }
