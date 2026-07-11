@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProgressRing } from "@/components/progress-ring";
+import { DataStatus, DataUnavailable } from "@/components/wealth/data-status";
+import { fmtCr, fmtNum, fmtPrice } from "@/lib/market-data";
 import { deepResearch, type ResearchReport } from "@/lib/research.functions";
 import {
   MessagesSquare,
@@ -270,70 +272,136 @@ function DeepResearchPanel() {
   );
 }
 
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-background p-3">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-0.5 font-display text-base font-bold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
 function ReportView({ report }: { report: ResearchReport }) {
-  const reco = RECO_STYLE[report.recommendation] ?? RECO_STYLE.HOLD;
+  const f = report.fundamentals;
+
+  if (!report.dataAvailable || !report.analysis) {
+    return (
+      <DataUnavailable
+        meta={report.meta}
+        title={`Live data unavailable for “${f.name || "this query"}”`}
+        hint="Atlas will not issue a recommendation without live fundamentals. Check the company name / ticker or the market-data provider key, then try again. No fabricated numbers are shown."
+      />
+    );
+  }
+
+  const a = report.analysis;
+  const reco = RECO_STYLE[a.recommendation] ?? RECO_STYLE.HOLD;
+  const changePos = (f.changePct ?? 0) >= 0;
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <Card className="overflow-hidden shadow-soft">
         <div className="bg-gradient-hero p-5 text-primary-foreground">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-wide opacity-80">{report.assetType}</p>
-              <h2 className="font-display text-2xl font-bold">{report.asset}</h2>
+              <p className="text-xs uppercase tracking-wide opacity-80">{f.sector ?? "Equity"}</p>
+              <h2 className="font-display text-2xl font-bold">{f.name}</h2>
+              <p className="mt-1 text-sm opacity-90">
+                {fmtPrice(f.cmp)}{" "}
+                {f.changePct !== null && (
+                  <span className={changePos ? "text-emerald-200" : "text-red-200"}>
+                    {changePos ? "▲" : "▼"} {fmtNum(Math.abs(f.changePct), "%")}
+                  </span>
+                )}
+              </p>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <span
-                  className="rounded-full px-3 py-1 text-sm font-bold"
-                  style={{ background: reco.bg, color: "#fff" }}
-                >
-                  {report.recommendation}
+                <span className="rounded-full px-3 py-1 text-sm font-bold" style={{ background: reco.bg, color: "#fff" }}>
+                  {a.recommendation}
                 </span>
-                <p className="mt-1 text-xs opacity-80">{report.confidence} confidence</p>
+                <p className="mt-1 text-xs opacity-80">{a.confidence} confidence</p>
               </div>
               <div className="rounded-2xl bg-white/10 p-1">
                 <ProgressRing
-                  value={report.convictionScore}
+                  value={a.convictionScore}
                   size={72}
                   stroke={7}
                   color="#fff"
                   trackColor="rgba(255,255,255,0.25)"
-                  label={`${report.convictionScore}`}
+                  label={`${a.convictionScore}`}
                   sublabel="conviction"
                 />
               </div>
             </div>
           </div>
         </div>
-        <CardContent className="p-5">
-          <p className="text-sm text-muted-foreground">{report.snapshot}</p>
+        <CardContent className="space-y-4 p-5">
+          <DataStatus meta={report.meta} />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            <Metric label="CMP" value={fmtPrice(f.cmp)} />
+            <Metric label="Market Cap" value={fmtCr(f.marketCap)} />
+            <Metric label="P/E" value={fmtNum(f.pe)} />
+            <Metric label="P/B" value={fmtNum(f.pb)} />
+            <Metric label="ROE" value={fmtNum(f.roe, "%")} />
+            <Metric label="ROCE" value={fmtNum(f.roce, "%")} />
+            <Metric label="Debt/Equity" value={fmtNum(f.debtToEquity)} />
+            <Metric label="Net Margin" value={fmtNum(f.netProfitMargin, "%")} />
+            <Metric label="Div Yield" value={fmtNum(f.dividendYield, "%")} />
+            <Metric label="52W Range" value={`${fmtPrice(f.yearLow)}–${fmtPrice(f.yearHigh)}`} />
+          </div>
+          <p className="text-sm text-muted-foreground">{a.snapshot}</p>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <ListCard title="Bull Case" icon={TrendingUp} color="#16a34a" items={report.bullCase} />
-        <ListCard title="Bear Case" icon={TrendingDown} color="#dc2626" items={report.bearCase} />
-        <ListCard title="Key Risks" icon={ShieldAlert} color="#d97706" items={report.risks} />
-        <ListCard title="Growth Drivers" icon={Rocket} color="#6366f1" items={report.growthDrivers} />
+        <ListCard title="Bull Case" icon={TrendingUp} color="#16a34a" items={a.bullCase} />
+        <ListCard title="Bear Case" icon={TrendingDown} color="#dc2626" items={a.bearCase} />
+        <ListCard title="Key Risks" icon={ShieldAlert} color="#d97706" items={a.risks} />
+        <ListCard title="Growth Drivers" icon={Rocket} color="#6366f1" items={a.growthDrivers} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <TextCard title="Valuation" icon={TargetIcon} text={report.valuation} />
-        <TextCard title="Portfolio Fit" icon={TargetIcon} text={report.portfolioFit} />
-        <ChipsCard title="Competitors" icon={Swords} items={report.competitors} />
-        <TextCard title="Investment Horizon" icon={Clock} text={report.investmentHorizon} />
+        <TextCard title="Valuation Summary" icon={TargetIcon} text={a.valuationSummary} />
+        <TextCard title="Portfolio Fit" icon={TargetIcon} text={a.portfolioFit} />
+        <ChipsCard title="Peers" icon={Swords} items={report.peers.map((p) => `${p.name} · PE ${fmtNum(p.pe)}`)} />
+        <TextCard title="Investment Horizon" icon={Clock} text={a.investmentHorizon} />
       </div>
+
+      {report.news.length > 0 && (
+        <Card className="shadow-soft">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-foreground">Recent News</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {report.news.slice(0, 6).map((n, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                  {n.url ? (
+                    <a href={n.url} target="_blank" rel="noreferrer" className="hover:underline">
+                      {n.title}
+                    </a>
+                  ) : (
+                    <span>{n.title}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="shadow-soft" style={{ borderColor: reco.fg + "55" }}>
         <CardHeader>
           <CardTitle className="text-base" style={{ color: reco.fg }}>
-            Verdict — {report.recommendation}
+            Verdict — {a.recommendation}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-sm">{report.verdict}</p>
+          <p className="text-sm">{a.verdict}</p>
           <p className="text-xs italic text-muted-foreground">
-            Educational research only — not investment advice. Verify with live data before acting.
+            Educational research only — not investment advice. Numbers sourced live from {report.meta.source}; verify before acting.
           </p>
         </CardContent>
       </Card>
