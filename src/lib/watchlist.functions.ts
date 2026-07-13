@@ -32,14 +32,19 @@ export const addWatch = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => addInput.parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const symbol = data.symbol.trim().toUpperCase();
+    const { data: existing } = await supabase
+      .from("watchlist")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("symbol", symbol)
+      .maybeSingle();
+    if (existing) return { ok: true, existed: true };
     const { error } = await supabase
       .from("watchlist")
-      .upsert(
-        { user_id: userId, symbol: data.symbol.trim().toUpperCase(), name: data.name.trim() },
-        { onConflict: "user_id,symbol" },
-      );
+      .insert({ user_id: userId, symbol, name: data.name.trim() });
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, existed: false };
   });
 
 export const removeWatch = createServerFn({ method: "POST" })
