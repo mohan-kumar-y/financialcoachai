@@ -1,20 +1,16 @@
-// Server-only market-data provider client + cache layer.
-// Talks to the Indian Stock Market API (indianapi.in) and caches raw
-// responses in public.market_cache so screens can show real values plus a
-// "last updated" timestamp. NEVER fabricates values: on failure it returns
-// the last cached payload (marked stale) or an explicit unavailable status.
+// Server-only market-data cache + equity provider adapter.
+// Talks to the Indian Stock Market API (indianapi.in) and caches raw responses
+// in public.market_cache so screens show real values plus a "last updated"
+// timestamp. NEVER fabricates values: on failure it returns the last cached
+// payload (marked stale) or an explicit unavailable status.
+
+import type { CachedPayload } from "@/lib/market-data";
+import { EQUITY_SOURCE } from "@/lib/providers";
 
 const API_BASE = "https://stock.indianapi.in";
-export const MARKET_SOURCE = "indianapi.in";
+export const MARKET_SOURCE = EQUITY_SOURCE;
 
-export type CacheStatus = "ok" | "stale" | "unavailable";
-
-export interface CachedPayload<T = unknown> {
-  payload: T | null;
-  source: string;
-  status: CacheStatus;
-  fetchedAt: string | null;
-}
+export type { CachedPayload };
 
 function apiKey(): string {
   const key = process.env.INDIAN_STOCK_API_KEY;
@@ -37,14 +33,14 @@ async function readCacheRow(cacheKey: string) {
   return data;
 }
 
-async function writeCacheRow(cacheKey: string, endpoint: string, payload: unknown) {
+async function writeCacheRow(cacheKey: string, endpoint: string, source: string, payload: unknown) {
   const db = await admin();
   await db.from("market_cache").upsert(
     {
       cache_key: cacheKey,
       endpoint,
       payload: payload as never,
-      source: MARKET_SOURCE,
+      source,
       status: "ok",
       fetched_at: new Date().toISOString(),
     },
@@ -52,27 +48,18 @@ async function writeCacheRow(cacheKey: string, endpoint: string, payload: unknow
   );
 }
 
-async function callProvider(path: string): Promise<unknown> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "x-api-key": apiKey(), accept: "application/json" },
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Provider ${res.status}: ${body.slice(0, 200)}`);
-  }
-  return res.json();
-}
-
 /**
- * Fetch-through-cache. Returns fresh data when the cache is younger than
- * ttlMinutes, otherwise re-fetches. On provider failure returns stale cache
- * (status "stale") or, if nothing cached, status "unavailable" with null payload.
+ * Generic fetch-through-cache. Returns fresh cache when younger than
+ * ttlMinutes; otherwise runs `fetcher`. On failure returns stale cache
+ * (status "stale") or, if nothing cached, status "unavailable" with null.
+ * Provider-agnostic: any adapter passes its own source + fetcher.
  */
-export async function getCached<T = unknown>(
+export async function cachedFetch<T = unknown>(
   cacheKey: string,
   endpoint: string,
-  path: string,
+  source: string,
   ttlMinutes: number,
+  fetcher: () => Promise<unknown>,
 ): Promise<CachedPayload<T>> {
   const existing = await readCacheRow(cacheKey);
   if (existing?.fetched_at) {
@@ -88,9 +75,9 @@ export async function getCached<T = unknown>(
   }
 
   try {
-    const fresh = await callProvider(path);
-    await writeCacheRow(cacheKey, endpoint, fresh);
-    return { payload: fresh as T, source: MARKET_SOURCE, status: "ok", fetchedAt: new Date().toISOString() };
+    const fresh = await fetcher();
+    await writeCacheRow(cacheKey, endpoint, source, fresh);
+    return { payload: fresh as T, source, status: "ok", fetchedAt: new Date().toISOString() };
   } catch {
     if (existing?.payload) {
       return {
@@ -100,11 +87,50 @@ export async function getCached<T = unknown>(
         fetchedAt: existing.fetched_at,
       };
     }
-    return { payload: null, source: MARKET_SOURCE, status: "unavailable", fetchedAt: null };
+    return { payload: null, source, status: "unavailable", fetchedAt: null };
   }
 }
 
-/** Direct pass-through (used by the probe / debugging). */
+async function callProvider(path: string): Promise<unknown> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { "x-api-key": apiKey(), accept: "application/json" },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Provider ${res.status}: ${body.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+/**
+ * Backwards-compatible equity fetch-through-cache (indianapi paths).
+ */
+export async function getCached<T = unknown>(
+  cacheKey: string,
+  endpoint: string,
+  path: string,
+  ttlMinutes: number,
+): Promise<CachedPayload<T>> {
+  return cachedFetch<T>(cacheKey, endpoint, MARKET_SOURCE, ttlMinutes, () => callProvider(path));
+}
+
+// ---- Equity adapter (indianapi.in) -----------------------------------------
+export const equityProvider = {
+  id: "indianapi" as const,
+  source: MARKET_SOURCE,
+  stock: (name: string, ttl = 30) =>
+    getCached<Record<string, unknown>>(
+      `stock:${name.trim().toLowerCase()}`,
+      "/stock",
+      `/stock?name=${encodeURIComponent(name.trim())}`,
+      ttl,
+    ),
+  trending: (ttl = 15) =>
+    getCached<Record<string, unknown>>("trending", "/trending", "/trending", ttl),
+  news: (ttl = 30) => getCached<unknown>("news", "/news", "/news", ttl),
+};
+
+/** Direct pass-through (debugging only). */
 export async function rawProvider(path: string): Promise<unknown> {
   return callProvider(path);
 }
