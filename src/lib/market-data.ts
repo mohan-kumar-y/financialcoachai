@@ -1,5 +1,10 @@
-// Client-safe market-data types + pure normalizers for the Indian Stock
-// Market API (indianapi.in). No secrets, no fetch — safe to import anywhere.
+// Client-safe market-data types + pure normalizers for the WealthOS market
+// layer. No secrets, no fetch — safe to import anywhere (client or server).
+//
+// Sources:
+//  - Equities/ETFs/fundamentals/news: Indian Stock Market API (indianapi.in)
+//  - Mutual fund NAVs (AMFI): mfapi.in
+// Anything a provider does not supply stays null — never fabricated.
 
 export type CacheStatus = "ok" | "stale" | "unavailable";
 
@@ -7,6 +12,13 @@ export interface DataMeta {
   source: string;
   fetchedAt: string | null;
   status: CacheStatus;
+}
+
+export interface CachedPayload<T = unknown> {
+  payload: T | null;
+  source: string;
+  status: CacheStatus;
+  fetchedAt: string | null;
 }
 
 export interface StockFundamentals {
@@ -25,6 +37,7 @@ export interface StockFundamentals {
   debtToEquity: number | null;
   dividendYield: number | null; // %
   netProfitMargin: number | null; // %
+  volume: number | null;
   found: boolean;
 }
 
@@ -49,6 +62,31 @@ export interface StockResearchData {
   meta: DataMeta;
 }
 
+// ---- Mutual funds (mfapi.in / AMFI) ----------------------------------------
+export interface FundSearchItem {
+  schemeCode: number;
+  schemeName: string;
+}
+
+export interface MutualFundData {
+  schemeCode: number | null;
+  name: string;
+  fundHouse: string | null;
+  category: string | null; // scheme_category
+  schemeType: string | null; // scheme_type (open/close ended)
+  isin: string | null;
+  nav: number | null; // latest NAV (₹)
+  navDate: string | null; // dd-mm-yyyy from AMFI
+  prevNav: number | null;
+  changePct: number | null; // day-over-day NAV change %
+  // AMFI/mfapi does NOT expose these — kept null so the UI shows "unavailable",
+  // never a fabricated value:
+  fundSize: number | null; // ₹ Cr (AUM)
+  expenseRatio: number | null; // %
+  topHoldings: string[] | null;
+  found: boolean;
+}
+
 // ---- coercion helpers -------------------------------------------------------
 export function num(v: unknown): number | null {
   if (v === null || v === undefined) return null;
@@ -59,6 +97,10 @@ export function num(v: unknown): number | null {
     return Number.isFinite(n) ? n : null;
   }
   return null;
+}
+
+function str(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v : null;
 }
 
 function firstNum(obj: Record<string, unknown> | undefined, keys: string[]): number | null {
@@ -85,7 +127,7 @@ export function normalizeFundamentals(raw: RawStock | null): StockFundamentals {
     return {
       symbol: "", name: "", sector: null, cmp: null, changePct: null, yearHigh: null, yearLow: null,
       marketCap: null, pe: null, pb: null, roe: null, roce: null, debtToEquity: null,
-      dividendYield: null, netProfitMargin: null, found: false,
+      dividendYield: null, netProfitMargin: null, volume: null, found: false,
     };
   }
 
@@ -129,6 +171,7 @@ export function normalizeFundamentals(raw: RawStock | null): StockFundamentals {
     debtToEquity: firstNum(self, ["ltDebtPerEquityMostRecentFiscalYear", "totalDebtToEquityRatio", "debtToEquity"]),
     dividendYield: firstNum(self, ["dividendYieldIndicatedAnnualDividend", "dividendYield"]),
     netProfitMargin: firstNum(self, ["netProfitMargin5YearAverage", "netProfitMarginPercentTrailing12Month", "netProfitMargin"]),
+    volume: firstNum(raw, ["volume", "totalTradedVolume"]) ?? firstNum(cpObj, ["volume"]),
     found: true,
   };
 }
@@ -167,6 +210,84 @@ export function normalizeAnalyst(raw: RawStock | null): AnalystView | null {
   const targetPrice = firstNum(recos, ["priceTarget", "targetPrice", "meanTarget"]);
   if (buy === null && hold === null && sell === null && targetPrice === null) return null;
   return { buy, hold, sell, targetPrice };
+}
+
+// ---- Mutual fund normalizers (mfapi.in) ------------------------------------
+export function normalizeFundSearch(raw: unknown): FundSearchItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((r) => {
+      const o = r as Record<string, unknown>;
+      const code = num(o.schemeCode);
+      const name = str(o.schemeName);
+      return code !== null && name ? { schemeCode: code, schemeName: name } : null;
+    })
+    .filter((x): x is FundSearchItem => x !== null);
+}
+
+export function normalizeFund(raw: Record<string, unknown> | null): MutualFundData {
+  const empty: MutualFundData = {
+    schemeCode: null, name: "", fundHouse: null, category: null, schemeType: null, isin: null,
+    nav: null, navDate: null, prevNav: null, changePct: null,
+    fundSize: null, expenseRatio: null, topHoldings: null, found: false,
+  };
+  if (!raw) return empty;
+  const meta = raw.meta as Record<string, unknown> | undefined;
+  const data = raw.data as Record<string, unknown>[] | undefined;
+  if (!meta) return empty;
+
+  const latest = Array.isArray(data) && data.length ? data[0] : undefined;
+  const prev = Array.isArray(data) && data.length > 1 ? data[1] : undefined;
+  const nav = num(latest?.nav);
+  const prevNav = num(prev?.nav);
+  const changePct = nav !== null && prevNav !== null && prevNav !== 0 ? ((nav - prevNav) / prevNav) * 100 : null;
+
+  return {
+    schemeCode: num(meta.scheme_code),
+    name: String(meta.scheme_name ?? ""),
+    fundHouse: str(meta.fund_house),
+    category: str(meta.scheme_category),
+    schemeType: str(meta.scheme_type),
+    isin: str(meta.isin_growth),
+    nav,
+    navDate: str(latest?.date),
+    prevNav,
+    changePct,
+    fundSize: null,
+    expenseRatio: null,
+    topHoldings: null,
+    found: nav !== null,
+  };
+}
+
+// ---- Live-price merge helpers (client-safe) --------------------------------
+type QuoteMap = Record<string, { fundamentals: StockFundamentals; meta: DataMeta }>;
+
+/** symbol -> live CMP, only for symbols the provider actually returned. */
+export function livePriceMap(quotes: QuoteMap | undefined): Record<string, number> {
+  const map: Record<string, number> = {};
+  if (!quotes) return map;
+  for (const [sym, v] of Object.entries(quotes)) {
+    if (v.fundamentals.cmp !== null) map[sym] = v.fundamentals.cmp;
+  }
+  return map;
+}
+
+/** Roll many per-symbol metas into one overall status for a screen badge. */
+export function aggregateMeta(quotes: QuoteMap | undefined, fallbackSource: string): DataMeta {
+  const metas = quotes ? Object.values(quotes).map((v) => v.meta) : [];
+  if (metas.length === 0) return { source: fallbackSource, fetchedAt: null, status: "unavailable" };
+  const status: CacheStatus = metas.some((m) => m.status === "ok")
+    ? "ok"
+    : metas.some((m) => m.status === "stale")
+      ? "stale"
+      : "unavailable";
+  const fetchedAt = metas
+    .map((m) => m.fetchedAt)
+    .filter((x): x is string => !!x)
+    .sort()
+    .at(-1) ?? null;
+  return { source: metas[0]?.source ?? fallbackSource, fetchedAt, status };
 }
 
 // ---- display helpers --------------------------------------------------------
