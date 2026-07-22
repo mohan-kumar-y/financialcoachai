@@ -117,9 +117,44 @@ function firstNum(obj: Record<string, unknown> | undefined, keys: string[]): num
 type RawStock = Record<string, unknown>;
 
 /**
+ * Flatten indianapi's `keyMetrics` (nested groups of { key, value } rows) into
+ * one lookup. Also indexes by a normalized key (strip `)`/spaces, lowercase)
+ * to tolerate upstream typos like `returnOnAverageEquityMostRecentFiscalYear)`.
+ */
+function flattenKeyMetrics(raw: RawStock | null): Record<string, unknown> {
+  const km = raw?.keyMetrics as Record<string, unknown> | undefined;
+  const out: Record<string, unknown> = {};
+  if (!km) return out;
+  const norm = (k: string) => k.replace(/[)\s]/g, "").toLowerCase();
+  for (const group of Object.values(km)) {
+    if (Array.isArray(group)) {
+      for (const row of group) {
+        const r = row as Record<string, unknown>;
+        const k = typeof r.key === "string" ? r.key : null;
+        if (!k) continue;
+        out[k] = r.value;
+        out[norm(k)] = r.value;
+      }
+    } else if (group && typeof group === "object") {
+      for (const [k, v] of Object.entries(group as Record<string, unknown>)) {
+        out[k] = v;
+        out[norm(k)] = v;
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * Normalize the /stock response into a flat fundamentals object.
- * Uses top-level price fields + the company's own row in peerCompanyList
- * (indianapi returns the queried company inside that list) for ratios.
+ *
+ * The queried company's OWN fundamentals live in top-level `keyMetrics`
+ * (grouped: valuation / margins / mgmtEffectiveness / financialstrength /
+ * priceandVolume ...). `companyProfile.peerCompanyList` is for PEER
+ * comparison and must NOT be used for the queried company's own numbers —
+ * doing so returned large-cap peer market caps for small caps like JPPOWER.
+ * Peers stay in normalizePeers().
+ *
  * Anything the provider does not supply stays null — never fabricated.
  */
 export function normalizeFundamentals(raw: RawStock | null): StockFundamentals {
@@ -137,19 +172,14 @@ export function normalizeFundamentals(raw: RawStock | null): StockFundamentals {
   const cmp = firstNum(cpObj, ["NSE", "BSE"]);
 
   const profile = raw.companyProfile as Record<string, unknown> | undefined;
-  const peerList = (profile?.peerCompanyList as Record<string, unknown>[] | undefined) ?? [];
-  // Find the queried company's own row; fall back to first peer.
-  const self =
-    peerList.find(
-      (p) =>
-        String(p.tickerId ?? "").toUpperCase() === tickerId.toUpperCase() ||
-        String(p.companyName ?? "").toLowerCase() === name.toLowerCase(),
-    ) ?? peerList[0];
-
   const sector =
     (typeof raw.industry === "string" && raw.industry) ||
-    (self && typeof self.mgIndustry === "string" && (self.mgIndustry as string)) ||
     (profile && typeof profile.mgIndustry === "string" ? (profile.mgIndustry as string) : null);
+
+  const km = flattenKeyMetrics(raw);
+  const nkm = (k: string) => k.replace(/[)\s]/g, "").toLowerCase();
+  const pick = (keys: string[]) =>
+    firstNum(km, keys.flatMap((k) => [k, nkm(k)]));
 
   return {
     symbol: tickerId,
@@ -159,18 +189,41 @@ export function normalizeFundamentals(raw: RawStock | null): StockFundamentals {
     changePct: num(raw.percentChange),
     yearHigh: num(raw.yearHigh),
     yearLow: num(raw.yearLow),
-    marketCap: firstNum(self, ["marketCap"]),
-    pe: firstNum(self, ["priceToEarningsValueRatio", "ttmPe", "priceEarningsRatio"]),
-    pb: firstNum(self, ["priceToBookValueRatio"]),
-    roe: firstNum(self, [
-      "returnOnAverageEquityTrailing12Month",
-      "returnOnAverageEquity5YearAverage",
-      "returnOnEquity",
+    marketCap: pick(["marketCap"]),
+    pe: pick([
+      "pPerENormalizedMostRecentFiscalYear",
+      "pPerEExcludingExtraordinaryItemsMostRecentFiscalYear",
+      "pPerEBasicExcludingExtraordinaryItemsTTM",
+      "pPerEIncludingExtraordinaryItemsTTM",
     ]),
-    roce: firstNum(self, ["returnOnAverageCapitalEmployed", "returnOnCapitalEmployed"]),
-    debtToEquity: firstNum(self, ["ltDebtPerEquityMostRecentFiscalYear", "totalDebtToEquityRatio", "debtToEquity"]),
-    dividendYield: firstNum(self, ["dividendYieldIndicatedAnnualDividend", "dividendYield"]),
-    netProfitMargin: firstNum(self, ["netProfitMargin5YearAverage", "netProfitMarginPercentTrailing12Month", "netProfitMargin"]),
+    pb: pick([
+      "priceToBookMostRecentQuarter",
+      "priceToBookMostRecentFiscalYear",
+    ]),
+    roe: pick([
+      "returnOnAverageEquityTrailing12Month",
+      "returnOnAverageEquityMostRecentFiscalYear",
+      "returnOnAverageEquity5YearAverage",
+    ]),
+    // ROCE isn't exposed by indianapi's keyMetrics — leave null rather than
+    // substituting ROI or a peer's value.
+    roce: null,
+    debtToEquity: pick([
+      "totalDebtPerTotalEquityMostRecentQuarter",
+      "totalDebtPerTotalEquityMostRecentFiscalYear",
+      "lTDebtPerEquityMostRecentQuarter",
+      "ltDebtPerEquityMostRecentFiscalYear",
+    ]),
+    dividendYield: pick([
+      "currentDividendYieldCommonStockPrimaryIssueLTM",
+      "dividendYieldIndicatedAnnualDividendDividedByClosingprice",
+      "dividendYield5YearAverage",
+    ]),
+    netProfitMargin: pick([
+      "netProfitMarginPercentTrailing12Month",
+      "netProfitMarginPercent1stHistoricalFiscalYear",
+      "netProfitMargin5YearAverage",
+    ]),
     volume: firstNum(raw, ["volume", "totalTradedVolume"]) ?? firstNum(cpObj, ["volume"]),
     found: true,
   };
