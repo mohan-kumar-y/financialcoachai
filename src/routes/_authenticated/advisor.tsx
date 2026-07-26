@@ -37,10 +37,10 @@ import {
   buildAdvisorActions,
   simulateSip,
   wealthScore,
-  MARKET_INDICES,
-  MARKET_NEWS,
   ASSET_LABEL,
 } from "@/lib/advisor";
+import { getTrending, getMarketNews } from "@/lib/market-data.functions";
+import { DataStatus } from "@/components/wealth/data-status";
 import { scoreLabel } from "@/lib/spending";
 import { formatINR } from "@/lib/blueprints";
 import {
