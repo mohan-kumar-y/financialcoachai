@@ -170,10 +170,15 @@ function SignalsPage() {
           </>
         )}
 
-        <LiveDataNote>
-          <strong>Connect later:</strong> signals combine your live P&L with sample valuation/fundamental data. Wire fundamentals and
-          your goal targets for precise, personalised exit signals.
-        </LiveDataNote>
+        {fundamentalsUnavailable && !empty && (
+          <div className="flex items-start gap-3 rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4 text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p className="text-muted-foreground">
+              Live fundamentals are currently unavailable for your equity holdings, so fundamental- and valuation-based signals are hidden.
+              Goal-achievement and concentration signals are still shown because they use your real P&amp;L and portfolio weights.
+            </p>
+          </div>
+        )}
       </main>
     </div>
   );
