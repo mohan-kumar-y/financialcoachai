@@ -37,10 +37,10 @@ import {
   buildAdvisorActions,
   simulateSip,
   wealthScore,
-  MARKET_INDICES,
-  MARKET_NEWS,
   ASSET_LABEL,
 } from "@/lib/advisor";
+import { getTrending, getMarketNews } from "@/lib/market-data.functions";
+import { DataStatus } from "@/components/wealth/data-status";
 import { scoreLabel } from "@/lib/spending";
 import { formatINR } from "@/lib/blueprints";
 import {
@@ -108,6 +108,11 @@ function AdvisorPage() {
   }, [sip, years, stepUp, lump]);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["holdings"] });
+
+  const fetchTrending = useServerFn(getTrending);
+  const fetchNews = useServerFn(getMarketNews);
+  const { data: trending } = useQuery({ queryKey: ["trending"], queryFn: () => fetchTrending() });
+  const { data: newsData } = useQuery({ queryKey: ["market-news"], queryFn: () => fetchNews() });
 
   const handleSubmit = async (v: HoldingFormValues) => {
     setSaving(true);
@@ -374,47 +379,65 @@ function AdvisorPage() {
           </Card>
 
           <Card className="shadow-soft">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Newspaper className="h-5 w-5 text-primary" /> Market Intelligence
               </CardTitle>
+              {trending?.meta && <DataStatus meta={trending.meta} />}
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {MARKET_INDICES.map((m) => (
-                  <div key={m.symbol} className="rounded-xl bg-muted/40 p-3">
-                    <p className="text-xs text-muted-foreground">{m.name}</p>
-                    <p
-                      className={
-                        "flex items-center gap-0.5 font-display text-sm font-bold " +
-                        (m.change >= 0 ? "text-emerald-500" : "text-destructive")
-                      }
-                    >
-                      {m.change >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                      {Math.abs(m.change)}%
-                    </p>
+              {trending && trending.gainers.length > 0 ? (
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Top Movers (live)</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {trending.gainers.slice(0, 6).map((m) => (
+                      <div key={m.symbol} className="rounded-xl bg-muted/40 p-3">
+                        <p className="truncate text-xs text-muted-foreground" title={m.name}>{m.name || m.symbol}</p>
+                        <p
+                          className={
+                            "flex items-center gap-0.5 font-display text-sm font-bold " +
+                            ((m.changePct ?? 0) >= 0 ? "text-emerald-500" : "text-destructive")
+                          }
+                        >
+                          {(m.changePct ?? 0) >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                          {m.changePct != null ? Math.abs(m.changePct).toFixed(2) : "—"}%
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Live market movers unavailable right now.</p>
+              )}
               <div className="space-y-2">
-                {MARKET_NEWS.map((n) => (
-                  <div key={n.title} className="flex items-start gap-2 text-sm">
-                    <span
-                      className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-                      style={{
-                        background:
-                          n.impact === "positive" ? "#22c55e" : n.impact === "negative" ? "#ef4444" : "#94a3b8",
-                      }}
-                    />
-                    <span>
-                      {n.title} <span className="text-xs text-muted-foreground">· {n.source}</span>
-                    </span>
-                  </div>
-                ))}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Latest Headlines</p>
+                  {newsData?.meta && <DataStatus meta={newsData.meta} />}
+                </div>
+                {newsData && newsData.news.length > 0 ? (
+                  newsData.news.slice(0, 5).map((n, i) => (
+                    <a
+                      key={i}
+                      href={n.url ?? "#"}
+                      target={n.url ? "_blank" : undefined}
+                      rel="noreferrer"
+                      className="flex items-start gap-2 text-sm hover:text-primary"
+                    >
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary/60" />
+                      <span>
+                        {n.title}
+                        {n.date && <span className="ml-1 text-xs text-muted-foreground">· {n.date.slice(0, 10)}</span>}
+                      </span>
+                    </a>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">News feed not available right now.</p>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
+
 
         {/* What-if simulator */}
         <Card className="shadow-soft">
