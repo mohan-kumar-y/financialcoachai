@@ -10,7 +10,8 @@ import { analyzePortfolio } from "@/lib/advisor";
 import { listHoldings } from "@/lib/holdings.functions";
 import { getMyPlan } from "@/lib/plan.functions";
 import { buildDailyBrief } from "@/lib/market";
-import { MARKET_INDICES } from "@/lib/advisor";
+import { getTrending, getMarketNews } from "@/lib/market-data.functions";
+import { DataStatus, DataUnavailable } from "@/components/wealth/data-status";
 import {
   Newspaper,
   Sun,
