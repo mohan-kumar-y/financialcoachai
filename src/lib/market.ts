@@ -296,26 +296,88 @@ export interface SellSignal {
   explanation: string;
 }
 
-export function buildSellSignals(holdings: HoldingComputed[]): SellSignal[] {
+export function buildSellSignals(
+  holdings: HoldingComputed[],
+  quotes: Record<string, import("@/lib/market-data").StockFundamentals | undefined> = {},
+): SellSignal[] {
   const signals: SellSignal[] = [];
   const total = holdings.reduce((s, h) => s + h.current, 0);
   holdings.forEach((h) => {
-    const match = STOCK_UNIVERSE.find((s) => s.symbol === (h.symbol ?? "").toUpperCase());
-    // Valuation excess.
-    if (match && match.pe >= 70) {
-      signals.push({ holding: h.name, symbol: h.symbol ?? h.name, reason: "Valuation excess", strength: match.pe >= 100 ? "Strong" : "Moderate", explanation: `Trading at ~${match.pe}x earnings — richly valued. Consider trimming to book gains and rebalance.` });
+    const f =
+      quotes[(h.symbol ?? "").toUpperCase()] ??
+      quotes[h.symbol ?? ""] ??
+      quotes[h.name.toUpperCase()] ??
+      quotes[h.name];
+    const label = h.symbol ?? h.name;
+
+    // --- Fundamental deterioration (needs live fundamentals) ---
+    if (f && f.found) {
+      const parts: string[] = [];
+      let severe = false;
+      if (f.debtToEquity != null && f.debtToEquity > 1.5) {
+        parts.push(`Debt/Equity of ${f.debtToEquity.toFixed(2)}`);
+        if (f.debtToEquity > 2.5) severe = true;
+      }
+      if (f.netProfitMargin != null && f.netProfitMargin < 5) {
+        parts.push(`net margin of ${f.netProfitMargin.toFixed(1)}%`);
+        if (f.netProfitMargin < 0) severe = true;
+      }
+      if (f.roe != null && f.roe < 5) {
+        parts.push(`ROE of ${f.roe.toFixed(1)}%`);
+      }
+      if (parts.length >= 2 || (parts.length === 1 && severe)) {
+        signals.push({
+          holding: h.name,
+          symbol: label,
+          reason: "Fundamental deterioration",
+          strength: severe ? "Strong" : "Moderate",
+          explanation: `${parts.join(", ")} — fundamentals are weak. Re-check the investment thesis.`,
+        });
+      }
     }
-    // Goal achievement (big winners).
+
+    // --- Valuation excess (needs live P/E or 52-week high) ---
+    if (f && f.found) {
+      if (f.pe != null && f.pe >= 40) {
+        signals.push({
+          holding: h.name,
+          symbol: label,
+          reason: "Valuation excess",
+          strength: f.pe >= 70 ? "Strong" : "Moderate",
+          explanation: `P/E of ${f.pe.toFixed(1)} vs threshold of 40 — richly valued. Consider trimming to book gains.`,
+        });
+      } else if (f.cmp != null && f.yearHigh != null && f.yearHigh > 0 && f.cmp / f.yearHigh >= 0.98) {
+        signals.push({
+          holding: h.name,
+          symbol: label,
+          reason: "Valuation excess",
+          strength: "Watch",
+          explanation: `Price ₹${f.cmp.toFixed(2)} is at 52-week high of ₹${f.yearHigh.toFixed(2)} — momentum stretched.`,
+        });
+      }
+    }
+
+    // --- Goal achievement (real P&L) ---
     if (h.pnlPct >= 60) {
-      signals.push({ holding: h.name, symbol: h.symbol ?? h.name, reason: "Goal achievement", strength: h.pnlPct >= 100 ? "Strong" : "Moderate", explanation: `Up ${h.pnlPct.toFixed(0)}% from cost. Booking partial profits locks in gains and reduces concentration.` });
+      signals.push({
+        holding: h.name,
+        symbol: label,
+        reason: "Goal achievement",
+        strength: h.pnlPct >= 100 ? "Strong" : "Moderate",
+        explanation: `Up ${h.pnlPct.toFixed(0)}% from cost. Booking partial profits locks in gains and reduces concentration.`,
+      });
     }
-    // Fundamental deterioration.
-    if (match && match.returns1y < 0 && h.pnlPct < -10) {
-      signals.push({ holding: h.name, symbol: h.symbol ?? h.name, reason: "Fundamental deterioration", strength: "Watch", explanation: `Sector/stock 1Y return is negative and your position is down ${Math.abs(h.pnlPct).toFixed(0)}%. Re-check the investment thesis.` });
-    }
-    // Risk increase (concentration).
+
+    // --- Risk increase (real concentration) ---
     if (total > 0 && h.current / total >= 0.3) {
-      signals.push({ holding: h.name, symbol: h.symbol ?? h.name, reason: "Risk increase", strength: "Moderate", explanation: `This single holding is ${Math.round((h.current / total) * 100)}% of your portfolio. Trimming reduces single-name risk.` });
+      const pct = Math.round((h.current / total) * 100);
+      signals.push({
+        holding: h.name,
+        symbol: label,
+        reason: "Risk increase",
+        strength: pct >= 45 ? "Strong" : "Moderate",
+        explanation: `This single holding is ${pct}% of your portfolio — trimming reduces single-name risk.`,
+      });
     }
   });
   const order = { Strong: 0, Moderate: 1, Watch: 2 } as const;

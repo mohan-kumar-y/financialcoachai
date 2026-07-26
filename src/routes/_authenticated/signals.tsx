@@ -4,15 +4,18 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { AppNav } from "@/components/app-nav";
-import { PageHeader, StatCard, LiveDataNote } from "@/components/wealth/kit";
+import { PageHeader, StatCard } from "@/components/wealth/kit";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataStatus } from "@/components/wealth/data-status";
 import { analyzePortfolio } from "@/lib/advisor";
 import { listHoldings } from "@/lib/holdings.functions";
 import { getMyPlan } from "@/lib/plan.functions";
+import { getQuotes } from "@/lib/market-data.functions";
+import type { StockFundamentals, DataMeta } from "@/lib/market-data";
 import { buildSellSignals, type SellReason } from "@/lib/market";
-import { TrendingDown, Activity, DollarSign, Target, ShieldAlert, Sparkles, CheckCircle2 } from "lucide-react";
+import { TrendingDown, Activity, DollarSign, Target, ShieldAlert, Sparkles, CheckCircle2, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/signals")({
   component: SignalsPage,
@@ -34,12 +37,53 @@ const STRENGTH_STYLE: Record<string, string> = {
 function SignalsPage() {
   const fetchHoldings = useServerFn(listHoldings);
   const fetchPlan = useServerFn(getMyPlan);
+  const fetchQuotes = useServerFn(getQuotes);
   const { data: planData } = useQuery({ queryKey: ["my-plan"], queryFn: () => fetchPlan() });
   const { data: holdData, isLoading } = useQuery({ queryKey: ["holdings"], queryFn: () => fetchHoldings() });
 
   const holdings = holdData?.holdings ?? [];
   const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
-  const signals = useMemo(() => buildSellSignals(portfolio.holdings), [portfolio]);
+
+  // Symbols worth fetching fundamentals for (equity-like assets with a symbol or name).
+  const symbols = useMemo(() => {
+    const eligible = holdings.filter((h) =>
+      ["stock", "etf"].includes(h.asset_type),
+    );
+    const set = new Set<string>();
+    eligible.forEach((h) => {
+      const s = (h.symbol ?? h.name).trim();
+      if (s) set.add(s);
+    });
+    return [...set];
+  }, [holdings]);
+
+  const { data: quotesData } = useQuery({
+    queryKey: ["signals-quotes", symbols],
+    queryFn: () => fetchQuotes({ data: { symbols } }),
+    enabled: symbols.length > 0,
+  });
+
+  // Build a keyed map (both uppercase symbol/name variants) for buildSellSignals.
+  const { quoteMap, meta, anyFundAvailable } = useMemo(() => {
+    const map: Record<string, StockFundamentals | undefined> = {};
+    let m: DataMeta | undefined;
+    let any = false;
+    if (quotesData) {
+      for (const [sym, res] of Object.entries(quotesData)) {
+        map[sym.toUpperCase()] = res.fundamentals;
+        map[sym] = res.fundamentals;
+        if (res.fundamentals.found) any = true;
+        if (!m || (res.meta.status === "ok" && m.status !== "ok")) m = res.meta;
+        else if (!m) m = res.meta;
+      }
+    }
+    return { quoteMap: map, meta: m, anyFundAvailable: any };
+  }, [quotesData]);
+
+  const signals = useMemo(
+    () => buildSellSignals(portfolio.holdings, quoteMap),
+    [portfolio, quoteMap],
+  );
 
   const byReason = (Object.keys(REASON_META) as SellReason[]).map((r) => ({
     reason: r,
@@ -47,6 +91,8 @@ function SignalsPage() {
   }));
 
   const empty = !isLoading && holdings.length === 0;
+  const fundamentalsUnavailable =
+    symbols.length > 0 && quotesData != null && !anyFundAvailable;
 
   return (
     <div className="min-h-screen bg-muted/30 pb-16">
@@ -56,7 +102,9 @@ function SignalsPage() {
           icon={TrendingDown}
           title="Sell Signal Engine"
           subtitle="When to trim or exit — signals for fundamental deterioration, valuation excess, goal achievement and rising risk, each with the reasoning."
+          actions={meta ? <DataStatus meta={meta} /> : undefined}
         />
+
 
         {empty ? (
           <EmptyState />
@@ -122,10 +170,15 @@ function SignalsPage() {
           </>
         )}
 
-        <LiveDataNote>
-          <strong>Connect later:</strong> signals combine your live P&L with sample valuation/fundamental data. Wire fundamentals and
-          your goal targets for precise, personalised exit signals.
-        </LiveDataNote>
+        {fundamentalsUnavailable && !empty && (
+          <div className="flex items-start gap-3 rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4 text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p className="text-muted-foreground">
+              Live fundamentals are currently unavailable for your equity holdings, so fundamental- and valuation-based signals are hidden.
+              Goal-achievement and concentration signals are still shown because they use your real P&amp;L and portfolio weights.
+            </p>
+          </div>
+        )}
       </main>
     </div>
   );
