@@ -109,6 +109,11 @@ function AdvisorPage() {
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["holdings"] });
 
+  const fetchTrending = useServerFn(getTrending);
+  const fetchNews = useServerFn(getMarketNews);
+  const { data: trending } = useQuery({ queryKey: ["trending"], queryFn: () => fetchTrending() });
+  const { data: newsData } = useQuery({ queryKey: ["market-news"], queryFn: () => fetchNews() });
+
   const handleSubmit = async (v: HoldingFormValues) => {
     setSaving(true);
     try {
