@@ -40,6 +40,10 @@ function BriefPage() {
   const fetchPlan = useServerFn(getMyPlan);
   const { data: planData } = useQuery({ queryKey: ["my-plan"], queryFn: () => fetchPlan() });
   const { data: holdData } = useQuery({ queryKey: ["holdings"], queryFn: () => fetchHoldings() });
+  const fetchTrending = useServerFn(getTrending);
+  const fetchNews = useServerFn(getMarketNews);
+  const { data: trending } = useQuery({ queryKey: ["trending"], queryFn: () => fetchTrending() });
+  const { data: newsData } = useQuery({ queryKey: ["market-news"], queryFn: () => fetchNews() });
 
   const holdings = holdData?.holdings ?? [];
   const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
@@ -48,6 +52,7 @@ function BriefPage() {
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
   const impactColor = { positive: "#22c55e", negative: "#ef4444", neutral: "#94a3b8" } as const;
+  const movers = (trending?.gainers ?? []).slice(0, 5);
 
   return (
     <div className="min-h-screen bg-muted/30 pb-16">
@@ -57,24 +62,29 @@ function BriefPage() {
           icon={Newspaper}
           title="Your Daily Brief"
           subtitle={`${greeting()}${name ? `, ${name}` : ""} 👋  ${today} — here's your personalised market rundown.`}
+          actions={trending?.meta ? <DataStatus meta={trending.meta} /> : undefined}
         />
 
-        {/* Indices strip */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {MARKET_INDICES.map((m, i) => (
-            <motion.div key={m.symbol} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-              <Card className="shadow-soft">
-                <CardContent className="p-3">
-                  <p className="text-xs text-muted-foreground">{m.name}</p>
-                  <p className={"flex items-center gap-0.5 font-display text-base font-bold " + (m.change >= 0 ? "text-emerald-500" : "text-destructive")}>
-                    {m.change >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-                    {Math.abs(m.change)}%
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+        {/* Live top movers strip */}
+        {movers.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {movers.map((m, i) => (
+              <motion.div key={m.symbol || i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+                <Card className="shadow-soft">
+                  <CardContent className="p-3">
+                    <p className="truncate text-xs text-muted-foreground" title={m.name}>{m.name || m.symbol}</p>
+                    <p className={"flex items-center gap-0.5 font-display text-base font-bold " + ((m.changePct ?? 0) >= 0 ? "text-emerald-500" : "text-destructive")}>
+                      {(m.changePct ?? 0) >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                      {m.changePct != null ? Math.abs(m.changePct).toFixed(2) : "—"}%
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        ) : trending?.meta ? (
+          <DataUnavailable meta={trending.meta} title="Live market movers unavailable" />
+        ) : null}
 
         <Card className="overflow-hidden shadow-soft">
           <div className="bg-gradient-hero p-5 text-primary-foreground">
