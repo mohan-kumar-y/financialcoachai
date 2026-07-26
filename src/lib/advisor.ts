@@ -148,29 +148,9 @@ export function buildAdvisorActions(p: PortfolioSummary): AdvisorAction[] {
   return actions.slice(0, 6);
 }
 
-// ---- Mock market intelligence (illustrative) ----
-export interface MarketItem {
-  name: string;
-  symbol: string;
-  change: number; // %
-  note: string;
-}
-
-export const MARKET_INDICES: MarketItem[] = [
-  { name: "Nifty 50", symbol: "NIFTY", change: 0.82, note: "Banking & IT led gains" },
-  { name: "Sensex", symbol: "BSE", change: 0.74, note: "Broad-based buying" },
-  { name: "Nifty Bank", symbol: "BANKNIFTY", change: 1.21, note: "PSU banks outperform" },
-  { name: "Nasdaq 100", symbol: "NDX", change: -0.34, note: "Tech cools after rally" },
-  { name: "Gold (₹/g)", symbol: "GOLD", change: 0.45, note: "Safe-haven demand steady" },
-];
-
-export const MARKET_NEWS: { title: string; impact: "positive" | "negative" | "neutral"; source: string }[] = [
-  { title: "RBI holds repo rate; signals stable outlook for borrowers", impact: "positive", source: "Markets Desk" },
-  { title: "IT majors guide for stronger H2 on AI deal pipeline", impact: "positive", source: "Sector Watch" },
-  { title: "Crude oil ticks up on supply concerns", impact: "negative", source: "Commodities" },
-  { title: "Domestic mutual fund SIP inflows hit record high", impact: "positive", source: "AMFI" },
-];
-
+// Market indices/news are fetched live via getTrending + getMarketNews server
+// functions (see src/lib/market-data.functions.ts). No static market
+// intelligence lives here — the "never fabricate" rule applies.
 export interface WhatIfResult {
   years: number;
   corpus: number;
