@@ -44,7 +44,8 @@ function AlertsPage() {
   const { data: holdData, isLoading } = useQuery({ queryKey: ["holdings"], queryFn: () => fetchHoldings() });
 
   const holdings = holdData?.holdings ?? [];
-  const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
+  const { liveHoldings } = useLiveHoldings(holdings);
+  const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
   const alerts = useMemo(() => buildAlerts(portfolio.holdings), [portfolio]);
 
   const [filter, setFilter] = useState<Severity | "All">("All");

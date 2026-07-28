@@ -11,6 +11,7 @@ import { listHoldings } from "@/lib/holdings.functions";
 import { getMyPlan } from "@/lib/plan.functions";
 import { buildDailyBrief } from "@/lib/market";
 import { getTrending, getMarketNews } from "@/lib/market-data.functions";
+import { useLiveHoldings } from "@/lib/use-live-holdings";
 import { DataStatus, DataUnavailable } from "@/components/wealth/data-status";
 import {
   Newspaper,
