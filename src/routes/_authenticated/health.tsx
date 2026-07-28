@@ -239,7 +239,7 @@ function HealthPage() {
               </Card>
             </div>
 
-            {quotesLoading && (
+            {hasEligible && !dataMeta && (
               <p className="text-center text-xs text-muted-foreground">Refreshing live fundamentals…</p>
             )}
           </>
