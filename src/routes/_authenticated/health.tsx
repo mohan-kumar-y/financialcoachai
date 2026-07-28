@@ -67,7 +67,16 @@ function HealthPage() {
           icon={Activity}
           title="Portfolio Health Dashboard"
           subtitle="Diversification, sector & market-cap allocation, risk and overall portfolio quality — computed from your actual holdings and live fundamentals."
-          actions={stockSymbols.length > 0 ? <DataStatus meta={dataMeta} /> : undefined}
+          actions={
+            hasEligible && dataMeta ? (
+              <div className="flex items-center gap-2">
+                <DataStatus meta={dataMeta} />
+                <span className="text-xs text-muted-foreground">
+                  {livePricedCount}/{eligibleCount} priced live
+                </span>
+              </div>
+            ) : undefined
+          }
         />
 
         {empty ? (
