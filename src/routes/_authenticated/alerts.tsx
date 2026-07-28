@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { analyzePortfolio } from "@/lib/advisor";
 import { listHoldings } from "@/lib/holdings.functions";
 import { getMyPlan } from "@/lib/plan.functions";
+import { useLiveHoldings } from "@/lib/use-live-holdings";
 import { buildAlerts, SEVERITY_COLOR, type Severity, type AlertKind } from "@/lib/market";
 import {
   Siren,
@@ -43,7 +44,8 @@ function AlertsPage() {
   const { data: holdData, isLoading } = useQuery({ queryKey: ["holdings"], queryFn: () => fetchHoldings() });
 
   const holdings = holdData?.holdings ?? [];
-  const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
+  const { liveHoldings } = useLiveHoldings(holdings);
+  const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
   const alerts = useMemo(() => buildAlerts(portfolio.holdings), [portfolio]);
 
   const [filter, setFilter] = useState<Severity | "All">("All");

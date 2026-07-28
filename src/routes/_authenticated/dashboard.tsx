@@ -24,6 +24,7 @@ import { getMyPlan, saveMyPlan } from "@/lib/plan.functions";
 import { listExpenses } from "@/lib/expenses.functions";
 import { listHoldings } from "@/lib/holdings.functions";
 import { analyzePortfolio } from "@/lib/advisor";
+import { useLiveHoldings } from "@/lib/use-live-holdings";
 import { computePlan, getTier, DEFAULT_INPUTS, type PlanInputs } from "@/lib/finance";
 import {
   inMonth,
@@ -95,7 +96,8 @@ function Dashboard() {
 
   const expenses = expData?.expenses ?? [];
   const holdings = holdData?.holdings ?? [];
-  const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
+  const { liveHoldings } = useLiveHoldings(holdings);
+  const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
   const plan = useMemo(() => computePlan(inputs), [inputs]);
   const tier = getTier(inputs.annualSalary, inputs.currency);
   const monthlyIncome = inputs.annualSalary / 12;

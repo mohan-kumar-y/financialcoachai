@@ -12,8 +12,8 @@ import { DataStatus } from "@/components/wealth/data-status";
 import { analyzePortfolio } from "@/lib/advisor";
 import { listHoldings } from "@/lib/holdings.functions";
 import { getMyPlan } from "@/lib/plan.functions";
-import { getQuotes } from "@/lib/market-data.functions";
-import type { StockFundamentals, DataMeta } from "@/lib/market-data";
+import { useLiveHoldings } from "@/lib/use-live-holdings";
+import type { StockFundamentals } from "@/lib/market-data";
 import { buildSellSignals, type SellReason } from "@/lib/market";
 import { TrendingDown, Activity, DollarSign, Target, ShieldAlert, Sparkles, CheckCircle2, AlertTriangle } from "lucide-react";
 
@@ -37,52 +37,23 @@ const STRENGTH_STYLE: Record<string, string> = {
 function SignalsPage() {
   const fetchHoldings = useServerFn(listHoldings);
   const fetchPlan = useServerFn(getMyPlan);
-  const fetchQuotes = useServerFn(getQuotes);
   const { data: planData } = useQuery({ queryKey: ["my-plan"], queryFn: () => fetchPlan() });
   const { data: holdData, isLoading } = useQuery({ queryKey: ["holdings"], queryFn: () => fetchHoldings() });
 
   const holdings = holdData?.holdings ?? [];
-  const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
+  const { liveHoldings, quoteMap, meta, hasEligible } = useLiveHoldings(holdings);
+  const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
 
-  // Symbols worth fetching fundamentals for (equity-like assets with a symbol or name).
-  const symbols = useMemo(() => {
-    const eligible = holdings.filter((h) =>
-      ["stock", "etf"].includes(h.asset_type),
-    );
-    const set = new Set<string>();
-    eligible.forEach((h) => {
-      const s = (h.symbol ?? h.name).trim();
-      if (s) set.add(s);
-    });
-    return [...set];
-  }, [holdings]);
+  const anyFundAvailable = useMemo(
+    () => Object.values(quoteMap).some((f) => f?.found),
+    [quoteMap],
+  );
 
-  const { data: quotesData } = useQuery({
-    queryKey: ["signals-quotes", symbols],
-    queryFn: () => fetchQuotes({ data: { symbols } }),
-    enabled: symbols.length > 0,
-  });
-
-  // Build a keyed map (both uppercase symbol/name variants) for buildSellSignals.
-  const { quoteMap, meta, anyFundAvailable } = useMemo(() => {
-    const map: Record<string, StockFundamentals | undefined> = {};
-    let m: DataMeta | undefined;
-    let any = false;
-    if (quotesData) {
-      for (const [sym, res] of Object.entries(quotesData)) {
-        map[sym.toUpperCase()] = res.fundamentals;
-        map[sym] = res.fundamentals;
-        if (res.fundamentals.found) any = true;
-        if (!m || (res.meta.status === "ok" && m.status !== "ok")) m = res.meta;
-        else if (!m) m = res.meta;
-      }
-    }
-    return { quoteMap: map, meta: m, anyFundAvailable: any };
-  }, [quotesData]);
+  const typedQuoteMap: Record<string, StockFundamentals | undefined> = quoteMap;
 
   const signals = useMemo(
-    () => buildSellSignals(portfolio.holdings, quoteMap),
-    [portfolio, quoteMap],
+    () => buildSellSignals(portfolio.holdings, typedQuoteMap),
+    [portfolio, typedQuoteMap],
   );
 
   const byReason = (Object.keys(REASON_META) as SellReason[]).map((r) => ({
@@ -91,8 +62,7 @@ function SignalsPage() {
   }));
 
   const empty = !isLoading && holdings.length === 0;
-  const fundamentalsUnavailable =
-    symbols.length > 0 && quotesData != null && !anyFundAvailable;
+  const fundamentalsUnavailable = hasEligible && meta != null && !anyFundAvailable;
 
   return (
     <div className="min-h-screen bg-muted/30 pb-16">

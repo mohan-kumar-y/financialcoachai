@@ -40,6 +40,7 @@ import {
   ASSET_LABEL,
 } from "@/lib/advisor";
 import { getTrending, getMarketNews } from "@/lib/market-data.functions";
+import { useLiveHoldings } from "@/lib/use-live-holdings";
 import { DataStatus } from "@/components/wealth/data-status";
 import { scoreLabel } from "@/lib/spending";
 import { formatINR } from "@/lib/blueprints";
@@ -81,7 +82,9 @@ function AdvisorPage() {
   const monthlyIncome = planData?.plan ? Number(planData.plan.annualSalary) / 12 : 100000;
   const monthlySip = planData?.plan ? Number(planData.plan.currentSip) || 20000 : 20000;
 
-  const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
+  const { liveHoldings, meta: liveMeta, eligibleCount, livePricedCount, hasEligible } =
+    useLiveHoldings(holdings);
+  const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
   const actions = useMemo(() => buildAdvisorActions(portfolio), [portfolio]);
   const advisorScore = useMemo(
     () => wealthScore(portfolio, monthlySip, monthlyIncome),
@@ -185,11 +188,21 @@ function AdvisorPage() {
               Your AI wealth coach — portfolio analysis, market intelligence & action plan.
             </p>
           </div>
-          {holdings.length === 0 && !isLoading && (
-            <Button variant="outline" onClick={handleSeed}>
-              <Sparkles className="h-4 w-4" /> Load sample portfolio
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            {hasEligible && liveMeta && (
+              <div className="flex items-center gap-2">
+                <DataStatus meta={liveMeta} />
+                <span className="text-xs text-muted-foreground">
+                  {livePricedCount}/{eligibleCount} priced live
+                </span>
+              </div>
+            )}
+            {holdings.length === 0 && !isLoading && (
+              <Button variant="outline" onClick={handleSeed}>
+                <Sparkles className="h-4 w-4" /> Load sample portfolio
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Top scores */}
