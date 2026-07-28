@@ -47,7 +47,8 @@ function BriefPage() {
   const { data: newsData } = useQuery({ queryKey: ["market-news"], queryFn: () => fetchNews() });
 
   const holdings = holdData?.holdings ?? [];
-  const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
+  const { liveHoldings } = useLiveHoldings(holdings);
+  const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
   const brief = useMemo(() => buildDailyBrief(portfolio.holdings), [portfolio]);
   const name = planData?.displayName?.split(" ")[0];
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
