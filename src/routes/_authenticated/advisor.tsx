@@ -81,7 +81,9 @@ function AdvisorPage() {
   const monthlyIncome = planData?.plan ? Number(planData.plan.annualSalary) / 12 : 100000;
   const monthlySip = planData?.plan ? Number(planData.plan.currentSip) || 20000 : 20000;
 
-  const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
+  const { liveHoldings, meta: liveMeta, eligibleCount, livePricedCount, hasEligible } =
+    useLiveHoldings(holdings);
+  const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
   const actions = useMemo(() => buildAdvisorActions(portfolio), [portfolio]);
   const advisorScore = useMemo(
     () => wealthScore(portfolio, monthlySip, monthlyIncome),
