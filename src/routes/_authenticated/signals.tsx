@@ -62,8 +62,7 @@ function SignalsPage() {
   }));
 
   const empty = !isLoading && holdings.length === 0;
-  const fundamentalsUnavailable =
-    symbols.length > 0 && quotesData != null && !anyFundAvailable;
+  const fundamentalsUnavailable = hasEligible && meta != null && !anyFundAvailable;
 
   return (
     <div className="min-h-screen bg-muted/30 pb-16">
