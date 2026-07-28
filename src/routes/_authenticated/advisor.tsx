@@ -40,6 +40,7 @@ import {
   ASSET_LABEL,
 } from "@/lib/advisor";
 import { getTrending, getMarketNews } from "@/lib/market-data.functions";
+import { useLiveHoldings } from "@/lib/use-live-holdings";
 import { DataStatus } from "@/components/wealth/data-status";
 import { scoreLabel } from "@/lib/spending";
 import { formatINR } from "@/lib/blueprints";
