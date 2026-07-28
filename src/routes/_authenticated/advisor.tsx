@@ -188,11 +188,21 @@ function AdvisorPage() {
               Your AI wealth coach — portfolio analysis, market intelligence & action plan.
             </p>
           </div>
-          {holdings.length === 0 && !isLoading && (
-            <Button variant="outline" onClick={handleSeed}>
-              <Sparkles className="h-4 w-4" /> Load sample portfolio
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            {hasEligible && liveMeta && (
+              <div className="flex items-center gap-2">
+                <DataStatus meta={liveMeta} />
+                <span className="text-xs text-muted-foreground">
+                  {livePricedCount}/{eligibleCount} priced live
+                </span>
+              </div>
+            )}
+            {holdings.length === 0 && !isLoading && (
+              <Button variant="outline" onClick={handleSeed}>
+                <Sparkles className="h-4 w-4" /> Load sample portfolio
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Top scores */}
