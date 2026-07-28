@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { analyzePortfolio } from "@/lib/advisor";
 import { listHoldings } from "@/lib/holdings.functions";
 import { getMyPlan } from "@/lib/plan.functions";
+import { useLiveHoldings } from "@/lib/use-live-holdings";
 import { buildAlerts, SEVERITY_COLOR, type Severity, type AlertKind } from "@/lib/market";
 import {
   Siren,
