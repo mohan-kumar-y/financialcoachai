@@ -96,7 +96,8 @@ function Dashboard() {
 
   const expenses = expData?.expenses ?? [];
   const holdings = holdData?.holdings ?? [];
-  const portfolio = useMemo(() => analyzePortfolio(holdings), [holdings]);
+  const { liveHoldings } = useLiveHoldings(holdings);
+  const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
   const plan = useMemo(() => computePlan(inputs), [inputs]);
   const tier = getTier(inputs.annualSalary, inputs.currency);
   const monthlyIncome = inputs.annualSalary / 12;
