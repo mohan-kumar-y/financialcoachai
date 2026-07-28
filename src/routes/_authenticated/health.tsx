@@ -23,10 +23,10 @@ import { ProgressRing } from "@/components/progress-ring";
 import { analyzePortfolio } from "@/lib/advisor";
 import { listHoldings } from "@/lib/holdings.functions";
 import { getMyPlan } from "@/lib/plan.functions";
-import { getQuotes } from "@/lib/market-data.functions";
+import { useLiveHoldings } from "@/lib/use-live-holdings";
 import { analyzeHealthLive, MARKET_CAP_TARGET, type CapTier } from "@/lib/portfolio-health";
 import { formatINRc } from "@/lib/market";
-import type { DataMeta, StockFundamentals } from "@/lib/market-data";
+import type { StockFundamentals } from "@/lib/market-data";
 import { Activity, ShieldCheck, Gauge, Sparkles, PieChart as PieIcon, Layers, TrendingDown, Wrench } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/health")({
@@ -38,57 +38,24 @@ const SECTOR_COLORS = ["#6366f1", "#22c55e", "#0f8b8d", "#f59e0b", "#ec4899", "#
 function HealthPage() {
   const fetchHoldings = useServerFn(listHoldings);
   const fetchPlan = useServerFn(getMyPlan);
-  const fetchQuotes = useServerFn(getQuotes);
   const { data: planData } = useQuery({ queryKey: ["my-plan"], queryFn: () => fetchPlan() });
   const { data: holdData, isLoading } = useQuery({ queryKey: ["holdings"], queryFn: () => fetchHoldings() });
 
   const holdings = holdData?.holdings ?? [];
-  const stockSymbols = useMemo(
-    () =>
-      Array.from(
-        new Set(holdings.filter((h) => h.asset_type === "stock").map((h) => (h.symbol ?? h.name).trim()).filter(Boolean)),
-      ),
-    [holdings],
-  );
-
-  const { data: quotesData, isLoading: quotesLoading } = useQuery({
-    queryKey: ["quotes", stockSymbols],
-    queryFn: () => fetchQuotes({ data: { symbols: stockSymbols } }),
-    enabled: stockSymbols.length > 0,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { liveHoldings, quoteMap, meta: dataMeta, eligibleCount, livePricedCount, hasEligible } =
+    useLiveHoldings(holdings);
 
   const fundMap = useMemo(() => {
     const m: Record<string, StockFundamentals | undefined> = {};
-    if (quotesData) for (const [k, v] of Object.entries(quotesData)) m[k] = v.fundamentals;
+    for (const [k, v] of Object.entries(quoteMap)) m[k] = v;
     return m;
-  }, [quotesData]);
-
-  // Refresh stock current prices with live CMP where available.
-  const liveHoldings = useMemo(
-    () =>
-      holdings.map((h) => {
-        if (h.asset_type !== "stock") return h;
-        const f = fundMap[(h.symbol ?? h.name).trim()];
-        return f && f.cmp !== null ? { ...h, current_price: f.cmp } : h;
-      }),
-    [holdings, fundMap],
-  );
+  }, [quoteMap]);
 
   const portfolio = useMemo(() => analyzePortfolio(liveHoldings), [liveHoldings]);
   const health = useMemo(
     () => analyzeHealthLive(portfolio.holdings, portfolio.diversificationScore, fundMap),
     [portfolio, fundMap],
   );
-
-  const dataMeta: DataMeta = useMemo(() => {
-    const metas = quotesData ? Object.values(quotesData).map((q) => q.meta) : [];
-    if (metas.length === 0) return { source: "indianapi.in", fetchedAt: null, status: "unavailable" };
-    const anyOk = metas.find((m) => m.status === "ok");
-    const anyStale = metas.find((m) => m.status === "stale");
-    const latest = metas.map((m) => m.fetchedAt).filter(Boolean).sort().pop() ?? null;
-    return { source: "indianapi.in", fetchedAt: latest, status: anyOk ? "ok" : anyStale ? "stale" : "unavailable" };
-  }, [quotesData]);
 
   const empty = !isLoading && holdings.length === 0;
 
