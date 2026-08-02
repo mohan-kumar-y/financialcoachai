@@ -333,7 +333,7 @@ Unchanged. Tracks signal/strategy/recommendation/confidence/reference price/regi
 Unchanged list, with one addition specific to §7: **scheduled-job status/skip detection** for the Cron-based poller replaces "WebSocket heartbeat/reconnect failures" as the operational signal to alert on. A missed poll must never silently present as live data.
 
 ---
-大 33. AI Production Controls
+## 33. AI Production Controls
 
 Unchanged — structured output validation, capability allow-list, evidence-reference validation, hallucinated-evidence detection, iteration limits, timeout, retry policy, model-provider abstraction, deterministic decision validation. AI failure must fail safely.
 
