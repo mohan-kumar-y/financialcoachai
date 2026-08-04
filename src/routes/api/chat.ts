@@ -1,13 +1,18 @@
+/**
+ * Thin transport layer for the research chat (Phase 1, LLD §14).
+ *
+ * This route owns NO reasoning. It only:
+ *   1. resolves the caller,
+ *   2. runs investment-brain.ts (which may only reach engines via the Gateway),
+ *   3. runs decision-validator.ts,
+ *   4. streams explanation-engine.ts prose,
+ *   5. writes the audit trail.
+ */
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  convertToModelMessages,
-  streamText,
-  tool,
-  stepCountIs,
-  type UIMessage,
-} from "ai";
+import { createClient } from "@supabase/supabase-js";
+import { tool, type UIMessage } from "ai";
 import { z } from "zod";
-import { createLovableAiGatewayProvider, WEALTH_MODEL } from "@/lib/ai-gateway.server";
+import type { Database } from "@/integrations/supabase/types";
 import {
   normalizeFundamentals,
   normalizePeers,
@@ -17,39 +22,38 @@ import {
   fmtNum,
   fmtPrice,
 } from "@/lib/market-data";
+import { run as runBrain } from "@/server/brain/investment-brain";
+import { validate } from "@/server/validator/decision-validator";
+import {
+  streamExplanation,
+  parseExplanation,
+} from "@/server/explanation/explanation-engine";
+import {
+  recordBrainRun,
+  recordDecision,
+  recordExplanation,
+} from "@/server/audit/audit-store";
 
 type ChatRequestBody = { messages?: unknown };
 
-const SYSTEM_PROMPT = `You are "Atlas", the AI Research Assistant inside WealthOS — a premium personal wealth platform for Indian investors (currency ₹ INR).
-
-You help users research stocks, ETFs, mutual funds, sectors and portfolio decisions. You write like a sharp, honest equity research analyst: structured, specific, and balanced.
+/**
+ * Prose guidance only — no verdict logic lives here. The action comes from the
+ * validated decision; this just tells the Explanation Engine how to write.
+ */
+const RESEARCH_STYLE = `You are "Atlas", the research voice of WealthOS.
 
 ## LIVE DATA IS MANDATORY
-You have a tool called \`lookupIndianStock\`. Whenever a user asks about a SPECIFIC listed Indian company or stock (e.g. "Analyze Vedanta", "Is HDFC Bank a buy?", "What's TCS worth?"):
-1. You MUST call \`lookupIndianStock\` FIRST to fetch the latest price, fundamentals and news.
-2. Base EVERY number (price, market cap, P/E, P/B, ROE, 52-week range, dividend yield, news) ONLY on the tool result.
-3. NEVER answer market-data questions from memory. NEVER invent or estimate a live price, market cap or valuation.
-4. If the tool returns \`available: false\`, reply exactly with a line "**Market data currently unavailable for <name>.**" and DO NOT provide any prices, valuation or a BUY/HOLD/AVOID verdict. Offer to retry or check the ticker instead.
+You have a tool called \`lookupIndianStock\`. Whenever the user asks about a SPECIFIC listed Indian company or stock:
+1. You MUST call \`lookupIndianStock\` FIRST.
+2. Every number (price, market cap, P/E, P/B, ROE, 52-week range, dividend yield, news) must come ONLY from the tool result.
+3. NEVER answer market-data questions from memory and NEVER invent or estimate a live figure.
+4. If the tool returns \`available: false\`, reply with the line "**Market data currently unavailable for <name>.**" and give no prices, valuation or verdict.
 
-For broad questions (sectors, "should I add international equity", fund categories, general concepts) where no single ticker applies, you may answer from analysis without the tool — but still never fabricate a specific live quote.
+For broad questions (sectors, fund categories, concepts) no tool call is needed, but never fabricate a quote.
 
-## FORMAT
-Use clean markdown with short sections. For a specific stock, structure the answer with these headings when data is available:
-- **Snapshot** (what it is, sector, size)
-- **Current Price & Key Metrics** (quote the live numbers from the tool: CMP, day change, market cap, P/E, P/B, ROE, dividend yield, 52W range)
-- **Valuation**
-- **Recent News** (from the tool)
-- **Bull Case**
-- **Bear Case / Risks**
-- **Growth Drivers**
-- **Portfolio Fit & Horizon**
-- **Verdict** — a clear **BUY / HOLD / AVOID** call, a **conviction score (0–100)** and a one-line rationale.
+## STYLE
+Sharp, honest equity-research tone. Use ₹ and Indian market context (NSE/BSE, Nifty, SEBI, SIP, ELSS). Always give both bull and bear. After live metrics, note the data source and freshness returned by the tool. If a validated WealthOS decision is supplied, present it under the contract headings and never override it; if none is supplied, answer the question directly and give no portfolio action.`;
 
-## RULES
-- Always give both bull and bear.
-- Use ₹ and Indian market context (NSE/BSE, Nifty, SEBI, SIP, ELSS).
-- After the live metrics, always note the data source and freshness returned by the tool.
-- ALWAYS include this disclaimer once at the end of investment-specific answers, in italics: *Educational research only — not investment advice. Verify with live data before acting.*`;
 
 const lookupIndianStock = tool({
   description:
@@ -129,6 +133,32 @@ const lookupIndianStock = tool({
   },
 });
 
+function lastUserText(messages: UIMessage[]): string {
+  const last = [...messages].reverse().find((m) => m.role === "user");
+  if (!last) return "";
+  return (last.parts ?? [])
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("\n")
+    .trim();
+}
+
+async function resolveCaller(request: Request) {
+  const url = process.env.SUPABASE_URL;
+  const anon = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const auth = request.headers.get("authorization");
+  if (!url || !anon || !auth?.startsWith("Bearer ")) return null;
+  const token = auth.slice(7);
+  const supabase = createClient<Database>(url, anon, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await supabase.auth.getClaims(token);
+  const userId = data?.claims?.sub;
+  if (error || !userId) return null;
+  return { supabase, userId };
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
@@ -137,26 +167,76 @@ export const Route = createFileRoute("/api/chat")({
         if (!Array.isArray(messages)) {
           return new Response("Messages are required", { status: 400 });
         }
-
-        const key = process.env.LOVABLE_API_KEY;
-        if (!key) {
+        if (!process.env.LOVABLE_API_KEY) {
           return new Response("Missing LOVABLE_API_KEY", { status: 500 });
         }
 
-        const gateway = createLovableAiGatewayProvider(key);
-        const result = streamText({
-          model: gateway(WEALTH_MODEL),
-          system: SYSTEM_PROMPT,
-          messages: await convertToModelMessages(messages as UIMessage[]),
+        const uiMessages = messages as UIMessage[];
+        const caller = await resolveCaller(request);
+
+        // 1. Investment Brain -> 2. Decision Validator (skipped for anonymous
+        //    callers: no portfolio context means no decision to validate).
+        let decision = null as Awaited<ReturnType<typeof validate>>["decision"] | null;
+        let evidence: Awaited<ReturnType<typeof runBrain>>["evidence"] = [];
+        let decisionId: string | null = null;
+
+        if (caller) {
+          try {
+            const correlationId = crypto.randomUUID();
+            const brain = await runBrain(
+              {
+                correlationId,
+                userRequest: lastUserText(uiMessages),
+                triggerType: "MANUAL",
+                userId: caller.userId,
+              },
+              { supabase: caller.supabase, userId: caller.userId },
+            );
+            evidence = brain.evidence;
+            const outcome = await validate(brain.draft, {
+              supabase: caller.supabase,
+              userId: caller.userId,
+              evidence: brain.evidence,
+            });
+            decision = outcome.decision;
+            await recordBrainRun(brain, {
+              userId: caller.userId,
+              requestText: lastUserText(uiMessages) || null,
+              triggerType: "MANUAL",
+            });
+            decisionId = await recordDecision(outcome.decision, {
+              failures: outcome.failures,
+              notes: outcome.notes,
+            });
+          } catch (err) {
+            console.error("[chat] brain pipeline failed:", err);
+            decision = null;
+          }
+        }
+
+        // 3. Explanation Engine — prose only, never a verdict of its own.
+        const result = await streamExplanation({
+          decision,
+          evidence,
+          messages: uiMessages,
           tools: { lookupIndianStock },
-          // Allow the model to call the tool, read the result, then compose the answer.
-          stopWhen: stepCountIs(4),
+          extraSystem: RESEARCH_STYLE,
         });
 
         return result.toUIMessageStreamResponse({
-          originalMessages: messages as UIMessage[],
+          originalMessages: uiMessages,
+          onFinish: async ({ responseMessage }) => {
+            if (!decision || !decisionId) return;
+            const text = (responseMessage?.parts ?? [])
+              .filter((p): p is { type: "text"; text: string } => p.type === "text")
+              .map((p) => p.text)
+              .join("\n");
+            if (!text) return;
+            await recordExplanation(decisionId, parseExplanation(text, decision), decision.action);
+          },
         });
       },
     },
   },
 });
+
