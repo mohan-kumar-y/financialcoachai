@@ -19,8 +19,8 @@ export async function recordBrainRun(
       user_id: input.userId,
       request_text: input.requestText,
       trigger_type: input.triggerType,
-      plan: result.plan as unknown as Record<string, unknown>,
-      capability_calls: {
+      plan: JSON.parse(JSON.stringify(result.plan)),
+      capability_calls: JSON.parse(JSON.stringify({
         log: result.runState.log,
         callsUsed: result.runState.callsUsed,
         evidence: result.evidence.map((e: Evidence) => ({
@@ -31,7 +31,7 @@ export async function recordBrainRun(
           source: e.source,
           observedAt: e.observedAt,
         })),
-      },
+      })),
       iterations: result.runState.iterationsUsed,
       model: result.model,
       prompt_version: result.promptVersion,
