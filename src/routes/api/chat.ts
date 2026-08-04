@@ -1,13 +1,18 @@
+/**
+ * Thin transport layer for the research chat (Phase 1, LLD §14).
+ *
+ * This route owns NO reasoning. It only:
+ *   1. resolves the caller,
+ *   2. runs investment-brain.ts (which may only reach engines via the Gateway),
+ *   3. runs decision-validator.ts,
+ *   4. streams explanation-engine.ts prose,
+ *   5. writes the audit trail.
+ */
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  convertToModelMessages,
-  streamText,
-  tool,
-  stepCountIs,
-  type UIMessage,
-} from "ai";
+import { createClient } from "@supabase/supabase-js";
+import { tool, type UIMessage } from "ai";
 import { z } from "zod";
-import { createLovableAiGatewayProvider, WEALTH_MODEL } from "@/lib/ai-gateway.server";
+import type { Database } from "@/integrations/supabase/types";
 import {
   normalizeFundamentals,
   normalizePeers,
@@ -17,39 +22,38 @@ import {
   fmtNum,
   fmtPrice,
 } from "@/lib/market-data";
+import { run as runBrain } from "@/server/brain/investment-brain";
+import { validate } from "@/server/validator/decision-validator";
+import {
+  streamExplanation,
+  parseExplanation,
+} from "@/server/explanation/explanation-engine";
+import {
+  recordBrainRun,
+  recordDecision,
+  recordExplanation,
+} from "@/server/audit/audit-store";
 
 type ChatRequestBody = { messages?: unknown };
 
-const SYSTEM_PROMPT = `You are "Atlas", the AI Research Assistant inside WealthOS — a premium personal wealth platform for Indian investors (currency ₹ INR).
-
-You help users research stocks, ETFs, mutual funds, sectors and portfolio decisions. You write like a sharp, honest equity research analyst: structured, specific, and balanced.
+/**
+ * Prose guidance only — no verdict logic lives here. The action comes from the
+ * validated decision; this just tells the Explanation Engine how to write.
+ */
+const RESEARCH_STYLE = `You are "Atlas", the research voice of WealthOS.
 
 ## LIVE DATA IS MANDATORY
-You have a tool called \`lookupIndianStock\`. Whenever a user asks about a SPECIFIC listed Indian company or stock (e.g. "Analyze Vedanta", "Is HDFC Bank a buy?", "What's TCS worth?"):
-1. You MUST call \`lookupIndianStock\` FIRST to fetch the latest price, fundamentals and news.
-2. Base EVERY number (price, market cap, P/E, P/B, ROE, 52-week range, dividend yield, news) ONLY on the tool result.
-3. NEVER answer market-data questions from memory. NEVER invent or estimate a live price, market cap or valuation.
-4. If the tool returns \`available: false\`, reply exactly with a line "**Market data currently unavailable for <name>.**" and DO NOT provide any prices, valuation or a BUY/HOLD/AVOID verdict. Offer to retry or check the ticker instead.
+You have a tool called \`lookupIndianStock\`. Whenever the user asks about a SPECIFIC listed Indian company or stock:
+1. You MUST call \`lookupIndianStock\` FIRST.
+2. Every number (price, market cap, P/E, P/B, ROE, 52-week range, dividend yield, news) must come ONLY from the tool result.
+3. NEVER answer market-data questions from memory and NEVER invent or estimate a live figure.
+4. If the tool returns \`available: false\`, reply with the line "**Market data currently unavailable for <name>.**" and give no prices, valuation or verdict.
 
-For broad questions (sectors, "should I add international equity", fund categories, general concepts) where no single ticker applies, you may answer from analysis without the tool — but still never fabricate a specific live quote.
+For broad questions (sectors, fund categories, concepts) no tool call is needed, but never fabricate a quote.
 
-## FORMAT
-Use clean markdown with short sections. For a specific stock, structure the answer with these headings when data is available:
-- **Snapshot** (what it is, sector, size)
-- **Current Price & Key Metrics** (quote the live numbers from the tool: CMP, day change, market cap, P/E, P/B, ROE, dividend yield, 52W range)
-- **Valuation**
-- **Recent News** (from the tool)
-- **Bull Case**
-- **Bear Case / Risks**
-- **Growth Drivers**
-- **Portfolio Fit & Horizon**
-- **Verdict** — a clear **BUY / HOLD / AVOID** call, a **conviction score (0–100)** and a one-line rationale.
+## STYLE
+Sharp, honest equity-research tone. Use ₹ and Indian market context (NSE/BSE, Nifty, SEBI, SIP, ELSS). Always give both bull and bear. After live metrics, note the data source and freshness returned by the tool. If a validated WealthOS decision is supplied, present it under the contract headings and never override it; if none is supplied, answer the question directly and give no portfolio action.`;
 
-## RULES
-- Always give both bull and bear.
-- Use ₹ and Indian market context (NSE/BSE, Nifty, SEBI, SIP, ELSS).
-- After the live metrics, always note the data source and freshness returned by the tool.
-- ALWAYS include this disclaimer once at the end of investment-specific answers, in italics: *Educational research only — not investment advice. Verify with live data before acting.*`;
 
 const lookupIndianStock = tool({
   description:
