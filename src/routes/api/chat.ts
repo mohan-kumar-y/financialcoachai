@@ -133,6 +133,32 @@ const lookupIndianStock = tool({
   },
 });
 
+function lastUserText(messages: UIMessage[]): string {
+  const last = [...messages].reverse().find((m) => m.role === "user");
+  if (!last) return "";
+  return (last.parts ?? [])
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("\n")
+    .trim();
+}
+
+async function resolveCaller(request: Request) {
+  const url = process.env.SUPABASE_URL;
+  const anon = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const auth = request.headers.get("authorization");
+  if (!url || !anon || !auth?.startsWith("Bearer ")) return null;
+  const token = auth.slice(7);
+  const supabase = createClient<Database>(url, anon, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await supabase.auth.getClaims(token);
+  const userId = data?.claims?.sub;
+  if (error || !userId) return null;
+  return { supabase, userId };
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
@@ -141,26 +167,76 @@ export const Route = createFileRoute("/api/chat")({
         if (!Array.isArray(messages)) {
           return new Response("Messages are required", { status: 400 });
         }
-
-        const key = process.env.LOVABLE_API_KEY;
-        if (!key) {
+        if (!process.env.LOVABLE_API_KEY) {
           return new Response("Missing LOVABLE_API_KEY", { status: 500 });
         }
 
-        const gateway = createLovableAiGatewayProvider(key);
-        const result = streamText({
-          model: gateway(WEALTH_MODEL),
-          system: SYSTEM_PROMPT,
-          messages: await convertToModelMessages(messages as UIMessage[]),
+        const uiMessages = messages as UIMessage[];
+        const caller = await resolveCaller(request);
+
+        // 1. Investment Brain -> 2. Decision Validator (skipped for anonymous
+        //    callers: no portfolio context means no decision to validate).
+        let decision = null as Awaited<ReturnType<typeof validate>>["decision"] | null;
+        let evidence: Awaited<ReturnType<typeof runBrain>>["evidence"] = [];
+        let decisionId: string | null = null;
+
+        if (caller) {
+          try {
+            const correlationId = crypto.randomUUID();
+            const brain = await runBrain(
+              {
+                correlationId,
+                userRequest: lastUserText(uiMessages),
+                triggerType: "MANUAL",
+                userId: caller.userId,
+              },
+              { supabase: caller.supabase, userId: caller.userId },
+            );
+            evidence = brain.evidence;
+            const outcome = await validate(brain.draft, {
+              supabase: caller.supabase,
+              userId: caller.userId,
+              evidence: brain.evidence,
+            });
+            decision = outcome.decision;
+            await recordBrainRun(brain, {
+              userId: caller.userId,
+              requestText: lastUserText(uiMessages) || null,
+              triggerType: "MANUAL",
+            });
+            decisionId = await recordDecision(outcome.decision, {
+              failures: outcome.failures,
+              notes: outcome.notes,
+            });
+          } catch (err) {
+            console.error("[chat] brain pipeline failed:", err);
+            decision = null;
+          }
+        }
+
+        // 3. Explanation Engine — prose only, never a verdict of its own.
+        const result = await streamExplanation({
+          decision,
+          evidence,
+          messages: uiMessages,
           tools: { lookupIndianStock },
-          // Allow the model to call the tool, read the result, then compose the answer.
-          stopWhen: stepCountIs(4),
+          extraSystem: RESEARCH_STYLE,
         });
 
         return result.toUIMessageStreamResponse({
-          originalMessages: messages as UIMessage[],
+          originalMessages: uiMessages,
+          onFinish: async ({ responseMessage }) => {
+            if (!decision || !decisionId) return;
+            const text = (responseMessage?.parts ?? [])
+              .filter((p): p is { type: "text"; text: string } => p.type === "text")
+              .map((p) => p.text)
+              .join("\n");
+            if (!text) return;
+            await recordExplanation(decisionId, parseExplanation(text, decision), decision.action);
+          },
         });
       },
     },
   },
 });
+
