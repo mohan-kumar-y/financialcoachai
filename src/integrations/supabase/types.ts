@@ -14,6 +14,128 @@ export type Database = {
   }
   public: {
     Tables: {
+      brain_runs: {
+        Row: {
+          capability_calls: Json | null
+          correlation_id: string
+          created_at: string
+          id: string
+          iterations: number
+          latency_ms: number | null
+          model: string
+          plan: Json | null
+          prompt_version: string
+          request_text: string | null
+          token_cost: number | null
+          trigger_type: string
+          user_id: string | null
+        }
+        Insert: {
+          capability_calls?: Json | null
+          correlation_id: string
+          created_at?: string
+          id?: string
+          iterations?: number
+          latency_ms?: number | null
+          model: string
+          plan?: Json | null
+          prompt_version: string
+          request_text?: string | null
+          token_cost?: number | null
+          trigger_type: string
+          user_id?: string | null
+        }
+        Update: {
+          capability_calls?: Json | null
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          iterations?: number
+          latency_ms?: number | null
+          model?: string
+          plan?: Json | null
+          prompt_version?: string
+          request_text?: string | null
+          token_cost?: number | null
+          trigger_type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      decisions: {
+        Row: {
+          action: string
+          brain_version: string | null
+          confidence: number
+          contradicting_evidence_ids: string[] | null
+          correlation_id: string
+          counter_thesis: string | null
+          created_at: string
+          execution_proposal: Json | null
+          id: string
+          instrument: string | null
+          invalidation_conditions: string[] | null
+          missing_evidence: string[] | null
+          monitoring_plan: string | null
+          risks: string[] | null
+          strategy: string | null
+          supporting_evidence_ids: string[] | null
+          thesis: string | null
+          time_horizon: string | null
+          validation_result: string | null
+        }
+        Insert: {
+          action: string
+          brain_version?: string | null
+          confidence?: number
+          contradicting_evidence_ids?: string[] | null
+          correlation_id: string
+          counter_thesis?: string | null
+          created_at?: string
+          execution_proposal?: Json | null
+          id?: string
+          instrument?: string | null
+          invalidation_conditions?: string[] | null
+          missing_evidence?: string[] | null
+          monitoring_plan?: string | null
+          risks?: string[] | null
+          strategy?: string | null
+          supporting_evidence_ids?: string[] | null
+          thesis?: string | null
+          time_horizon?: string | null
+          validation_result?: string | null
+        }
+        Update: {
+          action?: string
+          brain_version?: string | null
+          confidence?: number
+          contradicting_evidence_ids?: string[] | null
+          correlation_id?: string
+          counter_thesis?: string | null
+          created_at?: string
+          execution_proposal?: Json | null
+          id?: string
+          instrument?: string | null
+          invalidation_conditions?: string[] | null
+          missing_evidence?: string[] | null
+          monitoring_plan?: string | null
+          risks?: string[] | null
+          strategy?: string | null
+          supporting_evidence_ids?: string[] | null
+          thesis?: string | null
+          time_horizon?: string | null
+          validation_result?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decisions_correlation_id_fkey"
+            columns: ["correlation_id"]
+            isOneToOne: false
+            referencedRelation: "brain_runs"
+            referencedColumns: ["correlation_id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -52,6 +174,68 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      explanations: {
+        Row: {
+          action: string | null
+          confidence: number | null
+          counter_arguments: string[] | null
+          counter_thesis: string | null
+          created_at: string
+          decision_id: string
+          evidence: string[] | null
+          id: string
+          portfolio_impact: string | null
+          recommendation: string | null
+          risks: string[] | null
+          thesis: string | null
+          what_happened: string | null
+          what_would_change_view: string[] | null
+          why_it_matters: string | null
+        }
+        Insert: {
+          action?: string | null
+          confidence?: number | null
+          counter_arguments?: string[] | null
+          counter_thesis?: string | null
+          created_at?: string
+          decision_id: string
+          evidence?: string[] | null
+          id?: string
+          portfolio_impact?: string | null
+          recommendation?: string | null
+          risks?: string[] | null
+          thesis?: string | null
+          what_happened?: string | null
+          what_would_change_view?: string[] | null
+          why_it_matters?: string | null
+        }
+        Update: {
+          action?: string | null
+          confidence?: number | null
+          counter_arguments?: string[] | null
+          counter_thesis?: string | null
+          created_at?: string
+          decision_id?: string
+          evidence?: string[] | null
+          id?: string
+          portfolio_impact?: string | null
+          recommendation?: string | null
+          risks?: string[] | null
+          thesis?: string | null
+          what_happened?: string | null
+          what_would_change_view?: string[] | null
+          why_it_matters?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explanations_decision_id_fkey"
+            columns: ["decision_id"]
+            isOneToOne: false
+            referencedRelation: "decisions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_plans: {
         Row: {
