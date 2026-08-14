@@ -62,6 +62,42 @@ export type Database = {
         }
         Relationships: []
       }
+      candles: {
+        Row: {
+          close: number | null
+          created_at: string
+          high: number | null
+          interval: string
+          low: number | null
+          open: number | null
+          symbol: string
+          ts: string
+          volume: number | null
+        }
+        Insert: {
+          close?: number | null
+          created_at?: string
+          high?: number | null
+          interval: string
+          low?: number | null
+          open?: number | null
+          symbol: string
+          ts: string
+          volume?: number | null
+        }
+        Update: {
+          close?: number | null
+          created_at?: string
+          high?: number | null
+          interval?: string
+          low?: number | null
+          open?: number | null
+          symbol?: string
+          ts?: string
+          volume?: number | null
+        }
+        Relationships: []
+      }
       decisions: {
         Row: {
           action: string
@@ -288,6 +324,24 @@ export type Database = {
         }
         Relationships: []
       }
+      fundamentals_cache: {
+        Row: {
+          fetched_at: string
+          payload: Json
+          symbol: string
+        }
+        Insert: {
+          fetched_at?: string
+          payload: Json
+          symbol: string
+        }
+        Update: {
+          fetched_at?: string
+          payload?: Json
+          symbol?: string
+        }
+        Relationships: []
+      }
       holdings: {
         Row: {
           asset_type: string
@@ -330,6 +384,36 @@ export type Database = {
         }
         Relationships: []
       }
+      live_quotes: {
+        Row: {
+          fetched_at: string
+          ltp: number
+          observed_at: string
+          quality: string
+          source: string
+          symbol: string
+          volume: number | null
+        }
+        Insert: {
+          fetched_at?: string
+          ltp: number
+          observed_at: string
+          quality?: string
+          source?: string
+          symbol: string
+          volume?: number | null
+        }
+        Update: {
+          fetched_at?: string
+          ltp?: number
+          observed_at?: string
+          quality?: string
+          source?: string
+          symbol?: string
+          volume?: number | null
+        }
+        Relationships: []
+      }
       market_cache: {
         Row: {
           cache_key: string
@@ -354,6 +438,36 @@ export type Database = {
           payload?: Json
           source?: string
           status?: string
+        }
+        Relationships: []
+      }
+      market_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          observed_at: string
+          payload: Json
+          source: string
+          symbol: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          observed_at: string
+          payload: Json
+          source: string
+          symbol: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          observed_at?: string
+          payload?: Json
+          source?: string
+          symbol?: string
         }
         Relationships: []
       }
