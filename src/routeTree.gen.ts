@@ -29,6 +29,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/brief'
 import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated/alerts'
 import { Route as AuthenticatedAdvisorRouteImport } from './routes/_authenticated/advisor'
+import { Route as ApiPublicCronPollQuotesRouteImport } from './routes/api/public/cron/poll-quotes'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -130,6 +131,11 @@ const AuthenticatedAdvisorRoute = AuthenticatedAdvisorRouteImport.update({
   path: '/advisor',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicCronPollQuotesRoute = ApiPublicCronPollQuotesRouteImport.update({
+  id: '/api/public/cron/poll-quotes',
+  path: '/api/public/cron/poll-quotes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/public/cron/poll-quotes': typeof ApiPublicCronPollQuotesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/public/cron/poll-quotes': typeof ApiPublicCronPollQuotesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/_authenticated/signals': typeof AuthenticatedSignalsRoute
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/public/cron/poll-quotes': typeof ApiPublicCronPollQuotesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/signals'
     | '/spending'
     | '/api/chat'
+    | '/api/public/cron/poll-quotes'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/signals'
     | '/spending'
     | '/api/chat'
+    | '/api/public/cron/poll-quotes'
   id:
     | '__root__'
     | '/'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/_authenticated/signals'
     | '/_authenticated/spending'
     | '/api/chat'
+    | '/api/public/cron/poll-quotes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -271,6 +283,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiPublicCronPollQuotesRoute: typeof ApiPublicCronPollQuotesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -415,6 +428,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdvisorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/cron/poll-quotes': {
+      id: '/api/public/cron/poll-quotes'
+      path: '/api/public/cron/poll-quotes'
+      fullPath: '/api/public/cron/poll-quotes'
+      preLoaderRoute: typeof ApiPublicCronPollQuotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -461,7 +481,18 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiPublicCronPollQuotesRoute: ApiPublicCronPollQuotesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
