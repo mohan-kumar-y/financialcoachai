@@ -34,8 +34,17 @@ export const getMyPlan = createServerFn({ method: "GET" })
       .eq("id", userId)
       .maybeSingle();
 
+    const { getFxRatesToInr } = await import("@/lib/fx-rates.server");
+    const fx = await getFxRatesToInr();
+    const currency = (data?.currency ?? "INR") as "INR" | "USD" | "EUR";
+
     return {
       displayName: profile?.display_name ?? null,
+      /** INR per one unit of the plan currency — feed into computePlan/getTier. */
+      fxRate: fx.toInr[currency],
+      fxSource: fx.source,
+      fxFetchedAt: fx.fetchedAt,
+      fxFallback: fx.fallback,
       plan: data
         ? {
             currency: data.currency as "INR" | "USD" | "EUR",

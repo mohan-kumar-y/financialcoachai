@@ -13,9 +13,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
   analyzePortfolio,
-  buildAdvisorActions,
   type PortfolioSummary,
 } from "@/lib/advisor";
+import { evaluateAll } from "@/server/rules/rules-engine";
 import type { HoldingRow } from "@/lib/holdings.functions";
 import type { CapabilityId, Evidence } from "@/server/contracts";
 
@@ -188,18 +188,26 @@ async function execute(
 
   if (req.capability === "RULES_EVALUATE") {
     const p = await portfolioSnapshot(ctx);
-    // advisor.ts is the Rules Engine in Phase 1; Phase 3 swaps this wrapper
-    // for the 12-category rules-engine.ts without changing the capability id.
-    const actions = buildAdvisorActions(p);
-    return actions.map((a) => ({
+    // Phase 3: the formal 12-category Rules Engine replaces the direct
+    // advisor.buildAdvisorActions call. Capability id is unchanged.
+    const evaluations = evaluateAll({ portfolio: p });
+    return evaluations.map((e) => ({
       id: evidenceId(),
       correlationId: req.correlationId,
       capability: "RULES_EVALUATE" as const,
-      summary: `Rule [${a.type}, severity ${a.severity}]: ${a.text}`,
-      payload: { ruleType: a.type, severity: a.severity, text: a.text },
+      summary: `Rule [${e.category}/${e.ruleId}, severity ${e.severity}, ${
+        e.passed ? "passed" : "breached"
+      }]: ${e.text}`,
+      payload: {
+        category: e.category,
+        ruleId: e.ruleId,
+        severity: e.severity,
+        passed: e.passed,
+        text: e.text,
+      },
       freshness: "FRESH" as const,
       observedAt: now,
-      source: "advisor.buildAdvisorActions",
+      source: "rules-engine.evaluateAll",
     }));
   }
 

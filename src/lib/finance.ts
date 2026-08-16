@@ -11,6 +11,8 @@ export interface PlanInputs {
   emergencyMonths: number;
   annualIncrementPct: number;
   sipStepUpPct: number;
+  /** Expected annual return %, default 12. */
+  returnRatePct?: number;
 }
 
 export const DEFAULT_INPUTS: PlanInputs = {
@@ -21,6 +23,7 @@ export const DEFAULT_INPUTS: PlanInputs = {
   emergencyMonths: 6,
   annualIncrementPct: 10,
   sipStepUpPct: 10,
+  returnRatePct: 12,
 };
 
 export type BucketKey =
@@ -98,10 +101,15 @@ export const TIERS: Tier[] = [
   },
 ];
 
-const CURRENCY_TO_INR: Record<Currency, number> = { INR: 1, USD: 84, EUR: 90 };
+export const CURRENCY_TO_INR: Record<Currency, number> = { INR: 1, USD: 84, EUR: 90 };
 
-export function getTier(annualSalary: number, currency: Currency): Tier {
-  const inr = annualSalary * CURRENCY_TO_INR[currency];
+/**
+ * `fxRate` = INR per one unit of `currency`. Supplied by callers that have a
+ * live rate (see src/lib/fx-rates.server.ts); defaults to the static constant
+ * so this module stays pure and backward compatible.
+ */
+export function getTier(annualSalary: number, currency: Currency, fxRate?: number): Tier {
+  const inr = annualSalary * (fxRate ?? CURRENCY_TO_INR[currency]);
   return (
     TIERS.find((t) => inr >= t.min && (t.max === null || inr < t.max)) ?? TIERS[0]
   );
@@ -162,8 +170,8 @@ export interface ComputedPlan {
   investRate: number; // investments + wealth %, of income
 }
 
-export function computePlan(inputs: PlanInputs): ComputedPlan {
-  const tier = getTier(inputs.annualSalary, inputs.currency);
+export function computePlan(inputs: PlanInputs, fxRate?: number): ComputedPlan {
+  const tier = getTier(inputs.annualSalary, inputs.currency, fxRate);
   const monthlyIncome = inputs.annualSalary / 12;
   const derivedExpenses =
     inputs.monthlyExpenses > 0
@@ -209,23 +217,36 @@ export interface ProjectionRow {
   monthlySip: number;
   annualInvested: number;
   cumulativeInvested: number;
-  projectedCorpus: number; // at 12% p.a. annual compounding on yearly contributions
+  projectedCorpus: number; // at the base return rate
+  projectedCorpusConservative: number; // base rate - 2%
+  projectedCorpusOptimistic: number; // base rate + 2%
 }
 
-export function projectGrowth(inputs: PlanInputs, years = 10, returnRate = 0.12): ProjectionRow[] {
+export function projectGrowth(
+  inputs: PlanInputs,
+  years = 10,
+  returnRate = (inputs.returnRatePct ?? 12) / 100,
+  fxRate?: number,
+): ProjectionRow[] {
   const rows: ProjectionRow[] = [];
   let salary = inputs.annualSalary;
-  const first = computePlan(inputs);
+  const first = computePlan(inputs, fxRate);
   let sip = Math.max(inputs.currentSip, first.recommendedSip);
   let cumulative = 0;
   let corpus = 0;
+  let corpusLow = 0;
+  let corpusHigh = 0;
+  const lowRate = Math.max(0, returnRate - 0.02);
+  const highRate = returnRate + 0.02;
 
   for (let y = 1; y <= years; y++) {
     const annualInvested = sip * 12;
     // grow existing corpus a year, then add this year's contributions
     corpus = corpus * (1 + returnRate) + annualInvested * (1 + returnRate / 2);
+    corpusLow = corpusLow * (1 + lowRate) + annualInvested * (1 + lowRate / 2);
+    corpusHigh = corpusHigh * (1 + highRate) + annualInvested * (1 + highRate / 2);
     cumulative += annualInvested;
-    const tier = getTier(salary, inputs.currency);
+    const tier = getTier(salary, inputs.currency, fxRate);
     rows.push({
       year: y,
       annualSalary: salary,
@@ -234,6 +255,8 @@ export function projectGrowth(inputs: PlanInputs, years = 10, returnRate = 0.12)
       annualInvested,
       cumulativeInvested: cumulative,
       projectedCorpus: corpus,
+      projectedCorpusConservative: corpusLow,
+      projectedCorpusOptimistic: corpusHigh,
     });
     // next year
     salary = salary * (1 + inputs.annualIncrementPct / 100);
