@@ -11,6 +11,8 @@ export interface PlanInputs {
   emergencyMonths: number;
   annualIncrementPct: number;
   sipStepUpPct: number;
+  /** Expected annual return %, default 12. */
+  returnRatePct?: number;
 }
 
 export const DEFAULT_INPUTS: PlanInputs = {
@@ -21,6 +23,7 @@ export const DEFAULT_INPUTS: PlanInputs = {
   emergencyMonths: 6,
   annualIncrementPct: 10,
   sipStepUpPct: 10,
+  returnRatePct: 12,
 };
 
 export type BucketKey =
