@@ -170,8 +170,8 @@ export interface ComputedPlan {
   investRate: number; // investments + wealth %, of income
 }
 
-export function computePlan(inputs: PlanInputs): ComputedPlan {
-  const tier = getTier(inputs.annualSalary, inputs.currency);
+export function computePlan(inputs: PlanInputs, fxRate?: number): ComputedPlan {
+  const tier = getTier(inputs.annualSalary, inputs.currency, fxRate);
   const monthlyIncome = inputs.annualSalary / 12;
   const derivedExpenses =
     inputs.monthlyExpenses > 0
