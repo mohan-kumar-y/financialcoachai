@@ -13,9 +13,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
   analyzePortfolio,
-  buildAdvisorActions,
   type PortfolioSummary,
 } from "@/lib/advisor";
+import { evaluateAll } from "@/server/rules/rules-engine";
 import type { HoldingRow } from "@/lib/holdings.functions";
 import type { CapabilityId, Evidence } from "@/server/contracts";
 
