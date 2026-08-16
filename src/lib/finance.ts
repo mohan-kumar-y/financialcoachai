@@ -101,10 +101,15 @@ export const TIERS: Tier[] = [
   },
 ];
 
-const CURRENCY_TO_INR: Record<Currency, number> = { INR: 1, USD: 84, EUR: 90 };
+export const CURRENCY_TO_INR: Record<Currency, number> = { INR: 1, USD: 84, EUR: 90 };
 
-export function getTier(annualSalary: number, currency: Currency): Tier {
-  const inr = annualSalary * CURRENCY_TO_INR[currency];
+/**
+ * `fxRate` = INR per one unit of `currency`. Supplied by callers that have a
+ * live rate (see src/lib/fx-rates.server.ts); defaults to the static constant
+ * so this module stays pure and backward compatible.
+ */
+export function getTier(annualSalary: number, currency: Currency, fxRate?: number): Tier {
+  const inr = annualSalary * (fxRate ?? CURRENCY_TO_INR[currency]);
   return (
     TIERS.find((t) => inr >= t.min && (t.max === null || inr < t.max)) ?? TIERS[0]
   );
