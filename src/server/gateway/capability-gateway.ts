@@ -117,7 +117,7 @@ async function loadHoldings(ctx: GatewayContext): Promise<HoldingRow[]> {
 async function portfolioSnapshot(ctx: GatewayContext): Promise<PortfolioSummary> {
   if (ctx.portfolioCache) return ctx.portfolioCache;
   const rows = await loadHoldings(ctx);
-  // advisor.ts is the Portfolio Engine in Phase 1 — wrapped, not reimplemented.
+  // Phase 4: portfolio-engine.ts is the Portfolio Engine — wrapped, not reimplemented.
   const summary = analyzePortfolio(rows);
   ctx.portfolioCache = summary;
   return summary;
