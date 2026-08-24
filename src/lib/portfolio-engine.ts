@@ -6,7 +6,7 @@
  * re-exports these for backward compatibility, so no other import path changed.
  *
  * NOTE ON LOCATION: this lives in src/lib/, not src/server/portfolio/, because
- * the build enforces import protection on `**/server/**` for the client bundle.
+ * the build enforces client import protection on any path under src/server.
  * Portfolio scoring is pure math consumed by both server engines (Capability
  * Gateway) and client routes, so it must sit in a client-safe module path.
  */
