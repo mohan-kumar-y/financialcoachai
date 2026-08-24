@@ -11,10 +11,12 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+// Phase 4: PORTFOLIO_SNAPSHOT calls the Portfolio Engine directly. advisor.ts is
+// now only a thin re-export of analyzePortfolio for legacy import paths.
 import {
   analyzePortfolio,
   type PortfolioSummary,
-} from "@/lib/advisor";
+} from "@/lib/portfolio-engine";
 import { evaluateAll } from "@/server/rules/rules-engine";
 import type { HoldingRow } from "@/lib/holdings.functions";
 import type { CapabilityId, Evidence } from "@/server/contracts";
@@ -115,7 +117,7 @@ async function loadHoldings(ctx: GatewayContext): Promise<HoldingRow[]> {
 async function portfolioSnapshot(ctx: GatewayContext): Promise<PortfolioSummary> {
   if (ctx.portfolioCache) return ctx.portfolioCache;
   const rows = await loadHoldings(ctx);
-  // advisor.ts is the Portfolio Engine in Phase 1 — wrapped, not reimplemented.
+  // Phase 4: portfolio-engine.ts is the Portfolio Engine — wrapped, not reimplemented.
   const summary = analyzePortfolio(rows);
   ctx.portfolioCache = summary;
   return summary;
