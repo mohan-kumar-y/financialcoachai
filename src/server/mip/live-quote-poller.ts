@@ -4,19 +4,7 @@
 
 import { getLTP, hasAngelCredentials, persistQuote } from "./angel-one.adapter";
 import { resolveSymbol } from "./angel-one.instruments";
-
-/**
- * Minimal NSE regular-session check: Mon-Fri, 09:15-15:30 IST.
- * KNOWN SIMPLIFICATION: no holiday calendar and no special sessions yet —
- * the Market Calendar Service (Phase 4, LLD §13) replaces this.
- */
-export function isMarketOpen(at: Date = new Date()): boolean {
-  const ist = new Date(at.getTime() + (5 * 60 + 30) * 60 * 1000); // UTC -> IST
-  const day = ist.getUTCDay();
-  if (day === 0 || day === 6) return false;
-  const minutes = ist.getUTCHours() * 60 + ist.getUTCMinutes();
-  return minutes >= 9 * 60 + 15 && minutes <= 15 * 60 + 30;
-}
+import { isMarketOpen } from "@/server/calendar/market-calendar";
 
 export interface PollResult {
   status: "skipped" | "ok";
