@@ -223,6 +223,60 @@ async function execute(
     }));
   }
 
+  // ---- Phase 5: signal layer ----------------------------------------------
+  if (req.capability === "RESEARCH_TECHNICAL" || req.capability === "RESEARCH_FUNDAMENTAL") {
+    const symbol = String(
+      (req.params?.["symbol"] as string | undefined) ??
+        (req.params?.["instrument"] as string | undefined) ??
+        "",
+    ).trim();
+    if (!symbol) {
+      throw new Error(`${req.capability} requires an instrument symbol`);
+    }
+
+    if (req.capability === "RESEARCH_TECHNICAL") {
+      const t = await computeTechnical(symbol);
+      const policy = policyFor("QUOTE", "SWING");
+      const freshness =
+        t.available && t.observedAt && policy
+          ? classify(new Date(t.observedAt), policy)
+          : "EXPIRED";
+      return [
+        {
+          id: evidenceId(),
+          correlationId: req.correlationId,
+          capability: "RESEARCH_TECHNICAL",
+          summary: t.summary,
+          payload: t,
+          freshness,
+          observedAt: t.observedAt ?? now,
+          source: "signals.technical",
+        },
+      ];
+    }
+
+    const f = await computeFundamental(symbol);
+    const policy = policyFor("FUNDAMENTAL");
+    const freshness =
+      f.available && f.observedAt && policy
+        ? classify(new Date(f.observedAt), policy)
+        : "EXPIRED";
+    return [
+      {
+        id: evidenceId(),
+        correlationId: req.correlationId,
+        capability: "RESEARCH_FUNDAMENTAL",
+        summary: f.summary,
+        payload: f,
+        freshness,
+        observedAt: f.observedAt ?? now,
+        source: f.source,
+      },
+    ];
+  }
+
+
+
   throw new Error(`Capability ${req.capability} has no Phase 1 implementation`);
 }
 
