@@ -22,7 +22,11 @@ export const DEFAULT_POLICIES: FreshnessPolicy[] = [
   { dataType: "QUOTE", strategy: "SWING", liveThresholdSec: 300, freshThresholdSec: 900, staleThresholdSec: 3600 },
   { dataType: "QUOTE", strategy: "LONG_TERM", liveThresholdSec: 3600, freshThresholdSec: 86400, staleThresholdSec: 259200 },
   { dataType: "NAV", liveThresholdSec: 86400, freshThresholdSec: 259200, staleThresholdSec: 604800 },
+  // Phase 5: fundamentals refresh daily; a week-old payload is stale, a
+  // month-old one is expired and must not back an actionable call.
+  { dataType: "FUNDAMENTAL", liveThresholdSec: 86400, freshThresholdSec: 604800, staleThresholdSec: 2592000 },
 ];
+
 
 /** Look up the policy for a data type (+ strategy where applicable). */
 export function policyFor(
