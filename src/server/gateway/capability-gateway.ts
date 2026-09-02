@@ -18,8 +18,12 @@ import {
   type PortfolioSummary,
 } from "@/lib/portfolio-engine";
 import { evaluateAll } from "@/server/rules/rules-engine";
+import { computeTechnical } from "@/server/signals/technical.signal";
+import { computeFundamental } from "@/server/signals/fundamental.signal";
+import { classify, policyFor } from "@/server/freshness/freshness-gate";
 import type { HoldingRow } from "@/lib/holdings.functions";
 import type { CapabilityId, Evidence } from "@/server/contracts";
+
 
 export interface CapabilityRequest {
   capability: CapabilityId;
