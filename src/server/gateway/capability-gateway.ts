@@ -76,8 +76,14 @@ export type GatewayResult = { evidence: Evidence[] } | { error: GatewayError; de
  * numbers — these are conservative and tunable in one place.
  */
 export const PHASE1_GATEWAY_CONFIG: CapabilityGatewayConfig = {
-  approvedCapabilities: ["RULES_EVALUATE", "PORTFOLIO_SNAPSHOT"],
+  approvedCapabilities: [
+    "RULES_EVALUATE",
+    "PORTFOLIO_SNAPSHOT",
+    "RESEARCH_TECHNICAL",
+    "RESEARCH_FUNDAMENTAL",
+  ],
   maxIterations: 3,
+
   maxCapabilityCalls: 6,
   timeoutMs: 25_000,
   tokenBudget: 12_000,
