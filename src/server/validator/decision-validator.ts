@@ -98,9 +98,38 @@ export async function validate(
     }
   }
 
+  // --- Gate 4: evidence freshness (Phase 5) ------------------------------
+  // An actionable call must rest on at least one LIVE/FRESH item. Stale
+  // evidence is not silently treated as equivalent to fresh evidence.
+  if (result === "PASSED" && ACTIONABLE.has(action)) {
+    const cited = ctx.evidence.filter((e) => supporting.includes(e.id));
+    const usable = cited.filter((e) => e.freshness === "LIVE" || e.freshness === "FRESH");
+    if (cited.length > 0 && usable.length === 0) {
+      failures.push(
+        `All supporting evidence is ${cited
+          .map((e) => e.freshness)
+          .join("/")} — too old to back an actionable call; downgraded to INSUFFICIENT_DATA.`,
+      );
+      action = "INSUFFICIENT_DATA";
+      confidence = 0;
+      result = "INSUFFICIENT_DATA";
+    } else if (cited.some((e) => e.freshness === "STALE" || e.freshness === "EXPIRED")) {
+      notes.push("Some supporting evidence is stale; confidence reduced by 10 points.");
+      confidence = Math.max(0, confidence - 10);
+      if (confidence < MIN_CONFIDENCE) {
+        failures.push(
+          `Confidence after the stale-evidence penalty (${confidence}) is below ${MIN_CONFIDENCE} — downgraded to NO_ACTION.`,
+        );
+        action = "NO_ACTION";
+        result = "NO_ACTION";
+      }
+    }
+  }
+
   if (result === "PASSED" && (action === "NO_ACTION" || action === "INSUFFICIENT_DATA")) {
     result = action;
   }
+
 
   return {
     decision: {

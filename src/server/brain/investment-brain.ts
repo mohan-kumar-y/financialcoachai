@@ -94,7 +94,8 @@ Hard rules:
 - If the evidence does not support a call, choose action INSUFFICIENT_DATA (data is missing) or NO_ACTION (evidence is adequate but nothing should change). Both are correct, expected outcomes — not failures.
 - Confidence must reflect the evidence actually present, not your prior knowledge.
 - Only cite evidence ids that were given to you.
-- Available capabilities in this build: PORTFOLIO_SNAPSHOT (the user's holdings, value, P&L, concentration, health) and RULES_EVALUATE (deterministic portfolio/risk/allocation rule findings). There is no live market-data capability yet — any request needing a live quote, valuation or company fundamental is INSUFFICIENT_DATA for decision purposes.`;
+- Available capabilities in this build: PORTFOLIO_SNAPSHOT (the user's holdings, value, P&L, concentration, health), RULES_EVALUATE (deterministic portfolio/risk/allocation rule findings), RESEARCH_TECHNICAL (trend, SMA/RSI/ATR, 52-week position from stored daily candles for ONE symbol) and RESEARCH_FUNDAMENTAL (market cap, P/E, P/B, ROE, D/E, margins for ONE symbol). The two RESEARCH capabilities need an instrument — set the plan's instrument field when you use them, and expect an explicit "unavailable" result rather than a guess when the data has not been collected yet.
+- Evidence is labelled LIVE / FRESH / STALE / EXPIRED. STALE or EXPIRED evidence cannot on its own support an actionable call; say so and prefer INSUFFICIENT_DATA.`;
 
 function evidenceBlock(evidence: Evidence[]): string {
   if (evidence.length === 0) return "(no evidence gathered)";
