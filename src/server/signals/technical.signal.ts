@@ -99,6 +99,23 @@ export function atr(rows: CandleRow[], period = 14): number | null {
   return slice.reduce((a, b) => a + b, 0) / slice.length;
 }
 
+/**
+ * Latest bar's volume versus the trailing `period`-bar average.
+ * Exported so the anomaly detector reuses this exact calculation rather than
+ * duplicating it. Returns null when there aren't enough usable volume bars.
+ */
+export function volumeVsAverage(
+  rows: CandleRow[],
+  period = 20,
+): { ratio: number; pct: number } | null {
+  const volumes = rows.map((r) => r.volume).filter((v): v is number => v != null && v > 0);
+  if (volumes.length < period) return null;
+  const avg = sma(volumes, period);
+  const last = volumes[volumes.length - 1]!;
+  if (avg == null || avg <= 0) return null;
+  return { ratio: last / avg, pct: Number(((last / avg - 1) * 100).toFixed(2)) };
+}
+
 // ---- data access ------------------------------------------------------------
 
 async function readCandles(symbol: string, limit = 400): Promise<CandleRow[]> {
