@@ -5,6 +5,7 @@
 import { getLTP, hasAngelCredentials, persistQuote } from "./angel-one.adapter";
 import { resolveSymbol } from "./angel-one.instruments";
 import { isMarketOpen } from "@/server/calendar/market-calendar";
+import { detectAndPersist } from "@/server/anomaly/anomaly-detection";
 
 export interface PollResult {
   status: "skipped" | "ok";
@@ -60,6 +61,9 @@ export async function pollLiveQuotes(now: Date = new Date()): Promise<PollResult
     // Store under the plain app symbol so downstream consumers stay provider-agnostic.
     await persistQuote({ ...quote.data, symbol });
     stored++;
+    // Phase 6: anomaly check on the freshly persisted tick. Cheap (one indexed
+    // candle read) and non-fatal — symbols without enough history skip silently.
+    await detectAndPersist(symbol, quote.data.ltp);
   }
   return { status: "ok", requested: symbols.length, stored, failed };
 }

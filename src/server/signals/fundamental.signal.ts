@@ -11,6 +11,9 @@ import { normalizeFundamentals } from "@/lib/market-data";
 import type { StockFundamentals } from "@/lib/market-data";
 import { fundamentals as fetchFundamentals, persistFundamentals, FUNDAMENTALS_SOURCE } from "@/server/mip/indianapi-fundamentals.adapter";
 
+import type { Signal } from "@/server/signals/signal-types";
+import { clamp01 } from "@/server/signals/signal-types";
+
 export const MAX_AGE_HOURS = 24;
 
 export interface FundamentalSignal {
@@ -157,5 +160,83 @@ export async function computeFundamental(symbolInput: string): Promise<Fundament
     )}, P/E ${fmt(f.pe)}, P/B ${fmt(f.pb)}, ROE ${fmt(f.roe, "%")}, D/E ${fmt(
       f.debtToEquity,
     )}, net margin ${fmt(f.netProfitMargin, "%")}, dividend yield ${fmt(f.dividendYield, "%")}.`,
+  };
+}
+
+// ---- Signal adapter (Phase 6, LLD §7) --------------------------------------
+
+const TOTAL_TRACKED_METRICS = 13; // keys on FundamentalSignal["metrics"]
+
+/**
+ * Map the fundamental read onto the shared Signal contract.
+ *
+ * Quality read (judgment calls, documented here — not spec). Each present
+ * metric votes +1 / -1; missing metrics do not vote at all:
+ *   ROE           >= 15 good, < 8 poor
+ *   D/E           <  1 good, > 2 poor
+ *   Net margin    >= 10 good, < 3 poor
+ *   P/E           <= 25 good, > 45 poor
+ * direction: net votes >= +2 BULLISH, <= -2 BEARISH, else NEUTRAL.
+ * strength: |net votes| / number of voting metrics, clamped 0-1.
+ * confidence: coverage * 0.9, where coverage = present / 13 tracked metrics —
+ *   so a payload missing half its metrics can never look confident.
+ *   Unavailable => 0.
+ */
+export function toSignal(f: FundamentalSignal): Signal {
+  if (!f.available || !f.metrics) {
+    return {
+      engine: "FUNDAMENTAL",
+      symbol: f.symbol,
+      direction: "NEUTRAL",
+      strength: 0,
+      confidence: 0,
+      evidence: [f.summary],
+      observedAt: f.observedAt ?? new Date().toISOString(),
+      source: "indianapi.fundamentals / fundamental.signal",
+    };
+  }
+
+  const m = f.metrics;
+  const votes: number[] = [];
+  const evidence: string[] = [];
+
+  if (m.roe != null) {
+    votes.push(m.roe >= 15 ? 1 : m.roe < 8 ? -1 : 0);
+    evidence.push(`ROE ${m.roe}%`);
+  }
+  if (m.debtToEquity != null) {
+    votes.push(m.debtToEquity < 1 ? 1 : m.debtToEquity > 2 ? -1 : 0);
+    evidence.push(`D/E ${m.debtToEquity}`);
+  }
+  if (m.netProfitMargin != null) {
+    votes.push(m.netProfitMargin >= 10 ? 1 : m.netProfitMargin < 3 ? -1 : 0);
+    evidence.push(`net margin ${m.netProfitMargin}%`);
+  }
+  if (m.pe != null) {
+    votes.push(m.pe <= 25 ? 1 : m.pe > 45 ? -1 : 0);
+    evidence.push(`P/E ${m.pe}`);
+  }
+
+  const net = votes.reduce((a, b) => a + b, 0);
+  const direction: Signal["direction"] = net >= 2 ? "BULLISH" : net <= -2 ? "BEARISH" : "NEUTRAL";
+  const strength = votes.length === 0 ? 0 : clamp01(Math.abs(net) / votes.length);
+
+  const present = TOTAL_TRACKED_METRICS - f.missingMetrics.length;
+  const coverage = clamp01(present / TOTAL_TRACKED_METRICS);
+  const confidence = Number(clamp01(coverage * 0.9).toFixed(3));
+
+  if (f.missingMetrics.length > 0) {
+    evidence.push(`provider did not expose: ${f.missingMetrics.join(", ")}`);
+  }
+
+  return {
+    engine: "FUNDAMENTAL",
+    symbol: f.symbol,
+    direction,
+    strength: Number(strength.toFixed(3)),
+    confidence,
+    evidence,
+    observedAt: f.observedAt ?? new Date().toISOString(),
+    source: "indianapi.fundamentals / fundamental.signal",
   };
 }
