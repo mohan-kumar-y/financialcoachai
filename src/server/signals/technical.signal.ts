@@ -10,6 +10,8 @@
  */
 import { getCandleData } from "@/server/mip/angel-one.adapter";
 import { resolveSymbol } from "@/server/mip/angel-one.instruments";
+import type { Signal } from "@/server/signals/signal-types";
+import { clamp01 } from "@/server/signals/signal-types";
 
 export const CANDLE_INTERVAL = "ONE_DAY";
 export const MIN_CANDLES = 30;
@@ -295,5 +297,63 @@ export async function computeTechnical(symbolInput: string): Promise<TechnicalSi
     trend,
     momentum,
     summary: `${symbol} technicals (${rows.length} daily candles, ${trend.toLowerCase()}): ${parts.join(", ")}.`,
+  };
+}
+
+// ---- Signal adapter (Phase 6, LLD §7) --------------------------------------
+
+/**
+ * Map the technical read onto the shared Signal contract.
+ *
+ * Thresholds are judgment calls, documented here (not spec):
+ * - direction: UPTREND -> BULLISH, DOWNTREND -> BEARISH, SIDEWAYS/UNKNOWN -> NEUTRAL.
+ * - strength: |RSI14 - 50| / 50, clamped 0-1. No RSI => 0 (no conviction claimed).
+ * - confidence: history factor * indicator factor.
+ *     history  = min(candleCount / 200, 1)  — 200 daily bars is where SMA200
+ *                becomes meaningful; fewer bars strictly lowers confidence.
+ *     indicator = 0.6 baseline, +0.2 if SMA50 exists, +0.2 if SMA200 exists.
+ *   Unavailable signal => confidence 0, direction NEUTRAL.
+ */
+export function toSignal(t: TechnicalSignal): Signal {
+  if (!t.available) {
+    return {
+      engine: "TECHNICAL",
+      symbol: t.symbol,
+      direction: "NEUTRAL",
+      strength: 0,
+      confidence: 0,
+      evidence: [t.summary],
+      observedAt: t.observedAt ?? new Date().toISOString(),
+      source: "angel-one.candles / technical.signal",
+    };
+  }
+
+  const direction: Signal["direction"] =
+    t.trend === "UPTREND" ? "BULLISH" : t.trend === "DOWNTREND" ? "BEARISH" : "NEUTRAL";
+
+  const strength = t.rsi14 == null ? 0 : clamp01(Math.abs(t.rsi14 - 50) / 50);
+
+  const history = clamp01(t.candleCount / 200);
+  const indicator = 0.6 + (t.sma50 != null ? 0.2 : 0) + (t.sma200 != null ? 0.2 : 0);
+  const confidence = Number(clamp01(history * indicator).toFixed(3));
+
+  const evidence = [
+    `${t.symbol} trend ${t.trend.toLowerCase()} on ${t.candleCount} daily candles`,
+    t.rsi14 != null ? `RSI14 ${t.rsi14} (${t.momentum.toLowerCase()})` : null,
+    t.sma20 != null ? `close ₹${t.close} vs SMA20 ₹${t.sma20}` : null,
+    t.sma200 != null ? `SMA200 ₹${t.sma200}` : null,
+    t.atr14Pct != null ? `ATR14 ${t.atr14Pct}% of price` : null,
+    t.volumeVsAvg20Pct != null ? `volume ${t.volumeVsAvg20Pct}% vs 20d average` : null,
+  ].filter((x): x is string => x != null);
+
+  return {
+    engine: "TECHNICAL",
+    symbol: t.symbol,
+    direction,
+    strength: Number(strength.toFixed(3)),
+    confidence,
+    evidence,
+    observedAt: t.observedAt ?? new Date().toISOString(),
+    source: "angel-one.candles / technical.signal",
   };
 }
