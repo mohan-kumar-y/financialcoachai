@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      anomaly_flags: {
+        Row: {
+          confidence: number
+          created_at: string
+          details: Json | null
+          deviation_score: number | null
+          driver_class: string
+          flagged: boolean
+          id: string
+          symbol: string
+          volume_ratio: number | null
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          details?: Json | null
+          deviation_score?: number | null
+          driver_class: string
+          flagged?: boolean
+          id?: string
+          symbol: string
+          volume_ratio?: number | null
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          details?: Json | null
+          deviation_score?: number | null
+          driver_class?: string
+          flagged?: boolean
+          id?: string
+          symbol?: string
+          volume_ratio?: number | null
+        }
+        Relationships: []
+      }
       brain_runs: {
         Row: {
           capability_calls: Json | null
