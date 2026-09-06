@@ -246,9 +246,7 @@ export async function computeTechnical(symbolInput: string): Promise<TechnicalSi
   const high52w = Math.max(...window52);
   const low52w = Math.min(...window52);
 
-  const volumes = rows.map((r) => r.volume).filter((v): v is number => v != null && v > 0);
-  const avgVol20 = volumes.length >= 20 ? sma(volumes, 20) : null;
-  const lastVol = volumes.length > 0 ? volumes[volumes.length - 1]! : null;
+  const volStat = volumeVsAverage(rows, 20);
 
   let trend: TechnicalSignal["trend"] = "UNKNOWN";
   if (s20 != null && s50 != null) {
@@ -264,7 +262,7 @@ export async function computeTechnical(symbolInput: string): Promise<TechnicalSi
   const distHigh = pct(((close - high52w) / high52w) * 100);
   const distLow = pct(((close - low52w) / low52w) * 100);
   const atrPct = a14 != null ? pct((a14 / close) * 100) : null;
-  const volVs = avgVol20 != null && lastVol != null ? pct((lastVol / avgVol20 - 1) * 100) : null;
+  const volVs = volStat ? volStat.pct : null;
 
   const parts = [
     `close ₹${close.toFixed(2)}`,
