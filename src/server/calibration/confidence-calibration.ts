@@ -38,6 +38,9 @@ const FRESHNESS_FACTOR: Record<Freshness, number> = {
 /**
  * @param regimeCompatibility 0-1: how well the signal set fits the current
  *        market regime. Pass 0.5 (neutral) when the regime is UNKNOWN.
+ * @param strategy optional pack from the Strategy Registry. Its
+ *        thresholds.confidenceCeiling caps the result for packs whose data
+ *        coverage is known to be incomplete (INTRADAY, IPO).
  * @returns 0-100 confidence.
  */
 export function calibrate(
@@ -45,6 +48,7 @@ export function calibrate(
   historicalReliability: Record<SignalEngine, number> = DEFAULT_RELIABILITY,
   freshness: Freshness = "FRESH",
   regimeCompatibility = 0.5,
+  strategy?: StrategyPack,
 ): number {
   if (signals.length === 0) return 0;
 
