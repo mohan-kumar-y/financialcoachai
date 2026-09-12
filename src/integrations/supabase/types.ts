@@ -528,6 +528,39 @@ export type Database = {
         }
         Relationships: []
       }
+      strategies: {
+        Row: {
+          created_at: string
+          horizon: string
+          id: string
+          notes: string | null
+          risk_profile: string
+          signal_weights: Json
+          thresholds: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          horizon: string
+          id: string
+          notes?: string | null
+          risk_profile: string
+          signal_weights?: Json
+          thresholds?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          horizon?: string
+          id?: string
+          notes?: string | null
+          risk_profile?: string
+          signal_weights?: Json
+          thresholds?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       watchlist: {
         Row: {
           created_at: string
