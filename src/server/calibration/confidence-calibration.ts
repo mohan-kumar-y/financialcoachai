@@ -76,5 +76,9 @@ export function calibrate(
   const regime = 0.8 + 0.6 * clamp01(regimeCompatibility) * 0.5;
 
   const score = base * FRESHNESS_FACTOR[freshness] * agreement * regime;
-  return Math.round(clamp01(score) * 100);
+  const pct = Math.round(clamp01(score) * 100);
+
+  // Packs with known-incomplete data coverage cap their own confidence.
+  const ceiling = strategy?.thresholds?.["confidenceCeiling"];
+  return ceiling != null ? Math.min(pct, Math.max(0, Math.round(ceiling))) : pct;
 }
