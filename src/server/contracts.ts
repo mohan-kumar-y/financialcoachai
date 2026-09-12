@@ -5,6 +5,8 @@
  * Investment Brain, Decision Validator and Explanation Engine. Later phases
  * extend these unions (more capabilities, more signals) without redesign.
  */
+import type { Signal } from "@/server/signals/signal-types";
+
 
 export type CapabilityId =
   | "RESEARCH_TECHNICAL"
@@ -50,6 +52,13 @@ export interface Evidence {
   freshness: Freshness;
   observedAt: string;
   source: string;
+  /**
+   * Phase 6/7 wiring: signal-bearing capabilities (RESEARCH_TECHNICAL /
+   * RESEARCH_FUNDAMENTAL) attach the deterministic Signal they produced so the
+   * Brain can run aggregation / calibration / probability on it. Optional —
+   * every other capability leaves it undefined.
+   */
+  signal?: Signal;
 }
 
 export type DecisionAction =
@@ -87,6 +96,24 @@ export interface DraftDecision {
   missingEvidence: string[];
   timeHorizon: string | null;
   monitoringPlan: string | null;
+  /**
+   * Deterministic pipeline audit trail (composite state, score, regime,
+   * calibrated confidence, probabilities). Optional and additive — consumers
+   * that predate it keep working unchanged.
+   */
+  deterministic?: {
+    strategy: string;
+    compositeState: string;
+    compositeScore: number;
+    regime: string;
+    regimeCompatibility: number;
+    calibratedConfidence: number;
+    llmStatedConfidence: number;
+    worstFreshness: Freshness;
+    bullishPct: number;
+    bearishPct: number;
+    sidewaysPct: number;
+  } | null;
   /** Reserved — nothing writes trade_proposals in this phase (LLD §17). */
   executionProposal: null;
   brainVersion: string;
