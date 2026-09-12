@@ -22,11 +22,24 @@ export interface StrategyPack {
   id: string;
   /** Partial map — engines absent from the map are ignored entirely. */
   signalWeights: Partial<Record<SignalEngine, number>>;
+  /**
+   * Loose numeric knobs read from strategies.thresholds. Known keys:
+   *   minConfidence     0-100 minimum calibrated confidence for an actionable call
+   *   maxPositionPct    max % of portfolio a single position may reach
+   *   confidenceCeiling 0-100 cap where the pack's data coverage is incomplete
+   */
+  thresholds?: Record<string, number>;
+  horizon?: string;
+  riskProfile?: string;
 }
 
-/** Phase 6 placeholder — equal weights over the two live engines. */
+/**
+ * Fallback of last resort only. Real callers fetch a pack through
+ * getStrategy(id) from src/server/strategy/strategy-registry.ts; this constant
+ * exists so a registry outage cannot leave aggregation with no weights at all.
+ */
 export const DEFAULT_STRATEGY: StrategyPack = {
-  id: "default-phase6",
+  id: "fallback-equal-weight",
   signalWeights: { TECHNICAL: 0.5, FUNDAMENTAL: 0.5 },
 };
 

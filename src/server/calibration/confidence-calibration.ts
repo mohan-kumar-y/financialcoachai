@@ -11,6 +11,7 @@
 import type { Freshness } from "@/server/freshness/freshness-gate";
 import type { Signal, SignalEngine } from "@/server/signals/signal-types";
 import { clamp01 } from "@/server/signals/signal-types";
+import type { StrategyPack } from "@/server/aggregation/signal-aggregation";
 
 export const FLAT_PRIOR = 0.6;
 
@@ -38,6 +39,9 @@ const FRESHNESS_FACTOR: Record<Freshness, number> = {
 /**
  * @param regimeCompatibility 0-1: how well the signal set fits the current
  *        market regime. Pass 0.5 (neutral) when the regime is UNKNOWN.
+ * @param strategy optional pack from the Strategy Registry. Its
+ *        thresholds.confidenceCeiling caps the result for packs whose data
+ *        coverage is known to be incomplete (INTRADAY, IPO).
  * @returns 0-100 confidence.
  */
 export function calibrate(
@@ -45,6 +49,7 @@ export function calibrate(
   historicalReliability: Record<SignalEngine, number> = DEFAULT_RELIABILITY,
   freshness: Freshness = "FRESH",
   regimeCompatibility = 0.5,
+  strategy?: StrategyPack,
 ): number {
   if (signals.length === 0) return 0;
 
@@ -71,5 +76,9 @@ export function calibrate(
   const regime = 0.8 + 0.6 * clamp01(regimeCompatibility) * 0.5;
 
   const score = base * FRESHNESS_FACTOR[freshness] * agreement * regime;
-  return Math.round(clamp01(score) * 100);
+  const pct = Math.round(clamp01(score) * 100);
+
+  // Packs with known-incomplete data coverage cap their own confidence.
+  const ceiling = strategy?.thresholds?.["confidenceCeiling"];
+  return ceiling != null ? Math.min(pct, Math.max(0, Math.round(ceiling))) : pct;
 }
