@@ -11,6 +11,7 @@
 import type { Freshness } from "@/server/freshness/freshness-gate";
 import type { Signal, SignalEngine } from "@/server/signals/signal-types";
 import { clamp01 } from "@/server/signals/signal-types";
+import type { StrategyPack } from "@/server/aggregation/signal-aggregation";
 
 export const FLAT_PRIOR = 0.6;
 
