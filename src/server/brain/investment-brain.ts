@@ -400,6 +400,7 @@ Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exac
       missingEvidence: [err instanceof Error ? err.message : "Unknown Brain error"],
       timeHorizon: null,
       monitoringPlan: null,
+      deterministic: null,
       executionProposal: null,
       brainVersion: BRAIN_VERSION,
     };
@@ -414,5 +415,6 @@ Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exac
     promptVersion: PROMPT_VERSION,
     latencyMs: Date.now() - startedAt,
     tokenCost,
+    deterministic,
   };
 }
