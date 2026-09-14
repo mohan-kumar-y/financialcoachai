@@ -275,6 +275,58 @@ export async function run(
     }
   }
 
+  // ---------- 2b. DETERMINISTIC LAYER (only when signals exist) ----------
+  // Guardrail: runs that never touched RESEARCH_TECHNICAL / RESEARCH_FUNDAMENTAL
+  // carry no Signal, so this block is skipped entirely and behaviour is
+  // byte-for-byte what it was before this wiring.
+  const signals: Signal[] = evidence
+    .map((e) => e.signal)
+    .filter((s): s is Signal => s != null);
+
+  let deterministic: DeterministicBlock | null = null;
+  if (signals.length > 0) {
+    const aggregation = aggregate(signals, strategyPack);
+    const regimeResult = await getCurrentRegime();
+    const regimeCompatibility = regimeCompatibilityFor(regimeResult.regime, aggregation.state);
+    // Only the signal-bearing evidence governs the freshness penalty; portfolio
+    // and rule evidence is always FRESH by construction and would mask decay.
+    const worstFreshness = worstFreshnessOf(
+      evidence.filter((e) => e.signal != null),
+    );
+    const calibratedConfidence = calibrate(
+      signals,
+      undefined,
+      worstFreshness,
+      regimeCompatibility,
+      strategyPack,
+    );
+    deterministic = {
+      strategyPack,
+      aggregation,
+      regime: regimeResult.regime,
+      regimeReason: regimeResult.reason,
+      regimeCompatibility,
+      calibratedConfidence,
+      worstFreshness,
+      probability: computeProbability(signals, strategyPack.signalWeights),
+    };
+  }
+
+  const deterministicPrompt = deterministic
+    ? `
+DETERMINISTIC ANALYSIS (authoritative — produced by deterministic engines, not by you):
+- Strategy pack: ${deterministic.strategyPack.id} (weights ${JSON.stringify(deterministic.strategyPack.signalWeights)})
+- Composite state: ${deterministic.aggregation.state} (score ${deterministic.aggregation.score}, engines used: ${deterministic.aggregation.usedEngines.join(", ") || "none"})
+- Market regime: ${deterministic.regime} — ${deterministic.regimeReason}
+- Regime compatibility: ${deterministic.regimeCompatibility}
+- Worst freshness across signal evidence: ${deterministic.worstFreshness}
+- Calibrated confidence: ${deterministic.calibratedConfidence}/100 (this REPLACES whatever confidence you state)
+- Probability: bullish ${deterministic.probability.bullishPct}% / bearish ${deterministic.probability.bearishPct}% / sideways ${deterministic.probability.sidewaysPct}% (probability-model confidence ${deterministic.probability.confidence})
+- Key bullish drivers: ${deterministic.probability.keyBullishDrivers.join(" | ") || "none"}
+- Key bearish risks: ${deterministic.probability.keyBearishRisks.join(" | ") || "none"}
+`
+    : "";
+
   // ---------- 3 + 4. THESIS / COUNTER-THESIS -> DECIDE ----------
   let draft: DraftDecision;
   try {
