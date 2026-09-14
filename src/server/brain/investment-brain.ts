@@ -115,6 +115,8 @@ export interface BrainRunResult {
   promptVersion: string;
   latencyMs: number;
   tokenCost: number;
+  /** Null when no signal-bearing evidence was gathered in this run. */
+  deterministic?: DeterministicBlock | null;
 }
 
 const capabilityEnum = z.enum(
@@ -166,7 +168,8 @@ Hard rules:
 - Confidence must reflect the evidence actually present, not your prior knowledge.
 - Only cite evidence ids that were given to you.
 - Available capabilities in this build: PORTFOLIO_SNAPSHOT (the user's holdings, value, P&L, concentration, health), RULES_EVALUATE (deterministic portfolio/risk/allocation rule findings), RESEARCH_TECHNICAL (trend, SMA/RSI/ATR, 52-week position from stored daily candles for ONE symbol) and RESEARCH_FUNDAMENTAL (market cap, P/E, P/B, ROE, D/E, margins for ONE symbol). The two RESEARCH capabilities need an instrument — set the plan's instrument field when you use them, and expect an explicit "unavailable" result rather than a guess when the data has not been collected yet.
-- Evidence is labelled LIVE / FRESH / STALE / EXPIRED. STALE or EXPIRED evidence cannot on its own support an actionable call; say so and prefer INSUFFICIENT_DATA.`;
+- Evidence is labelled LIVE / FRESH / STALE / EXPIRED. STALE or EXPIRED evidence cannot on its own support an actionable call; say so and prefer INSUFFICIENT_DATA.
+- When a DETERMINISTIC ANALYSIS block is supplied, it is authoritative. It comes from deterministic engines (signal aggregation, confidence calibration, market regime, market probability), not from you. Your own stated confidence is ignored and replaced by the calibrated confidence in that block, so do not argue with it — reason consistently with it. If your qualitative read contradicts the composite state, say so explicitly in the counter-thesis instead of overriding the numbers.`;
 
 function evidenceBlock(evidence: Evidence[]): string {
   if (evidence.length === 0) return "(no evidence gathered)";
