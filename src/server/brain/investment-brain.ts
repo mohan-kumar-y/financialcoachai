@@ -366,6 +366,21 @@ Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exac
       missingEvidence: o.missingEvidence,
       timeHorizon: o.timeHorizon,
       monitoringPlan: o.monitoringPlan,
+      deterministic: deterministic
+        ? {
+            strategy: deterministic.strategyPack.id,
+            compositeState: deterministic.aggregation.state,
+            compositeScore: deterministic.aggregation.score,
+            regime: deterministic.regime,
+            regimeCompatibility: deterministic.regimeCompatibility,
+            calibratedConfidence: deterministic.calibratedConfidence,
+            llmStatedConfidence,
+            worstFreshness: deterministic.worstFreshness,
+            bullishPct: deterministic.probability.bullishPct,
+            bearishPct: deterministic.probability.bearishPct,
+            sidewaysPct: deterministic.probability.sidewaysPct,
+          }
+        : null,
       executionProposal: null,
       brainVersion: BRAIN_VERSION,
     };
