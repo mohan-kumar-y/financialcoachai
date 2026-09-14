@@ -27,6 +27,77 @@ import {
   type GatewayContext,
   type GatewayRunState,
 } from "@/server/gateway/capability-gateway";
+import type { Signal } from "@/server/signals/signal-types";
+import {
+  aggregate,
+  type AggregationResult,
+  type StrategyPack,
+} from "@/server/aggregation/signal-aggregation";
+import { calibrate } from "@/server/calibration/confidence-calibration";
+import { computeProbability, type ProbabilityResult } from "@/server/probability/market-probability";
+import { getCurrentRegime, type MarketRegime } from "@/server/regime/market-regime";
+import { getStrategyOrFallback, type StrategyId } from "@/server/strategy/strategy-registry";
+import type { Freshness } from "@/server/freshness/freshness-gate";
+
+/**
+ * Deterministic strategy inference. This is a judgment call, kept as a plain
+ * keyword heuristic on purpose: it must be reproducible and auditable, so no
+ * LLM decides which strategy pack governs a run. Order matters — the more
+ * specific instrument classes are matched before the generic LONG_TERM default.
+ */
+export function inferStrategyId(request: string, triggerType: TriggerType): StrategyId {
+  const r = request.toLowerCase();
+  if (/\bsip\b/.test(r)) return "SIP";
+  if (/\bipo\b/.test(r)) return "IPO";
+  if (/\bintraday\b|\btoday\b/.test(r)) return "INTRADAY";
+  if (/\bswing\b|short[- ]term/.test(r)) return "SWING";
+  if (/\betf\b/.test(r)) return "ETF";
+  if (/mutual fund|\bfund\b/.test(r)) return "MUTUAL_FUND";
+  if (/portfolio|review|rebalance/.test(r)) return "PORTFOLIO_REVIEW";
+  // A scheduled run with no explicit request is a portfolio review by nature.
+  if (!request.trim() && triggerType !== "MANUAL") return "PORTFOLIO_REVIEW";
+  return "LONG_TERM";
+}
+
+/**
+ * Regime compatibility (0-1), documented judgment call:
+ *   aligned lean (BULL + bullish, BEAR + bearish)          -> 0.8
+ *   opposing lean (BULL + bearish, BEAR + bullish)         -> 0.3
+ *   SIDEWAYS, or a neutral composite in any regime         -> 0.5
+ *   HIGH_VOLATILITY (directional calls are less reliable)  -> 0.4
+ *   UNKNOWN (no index data — never penalise or reward)     -> 0.5
+ */
+export function regimeCompatibilityFor(regime: MarketRegime, state: string): number {
+  const bullish = state.includes("BULLISH");
+  const bearish = state.includes("BEARISH");
+  if (regime === "UNKNOWN") return 0.5;
+  if (regime === "HIGH_VOLATILITY") return 0.4;
+  if (regime === "SIDEWAYS" || (!bullish && !bearish)) return 0.5;
+  if (regime === "BULL") return bullish ? 0.8 : 0.3;
+  if (regime === "BEAR") return bearish ? 0.8 : 0.3;
+  return 0.5;
+}
+
+const FRESHNESS_RANK: Record<Freshness, number> = { LIVE: 0, FRESH: 1, STALE: 2, EXPIRED: 3 };
+
+function worstFreshnessOf(evidence: Evidence[]): Freshness {
+  let worst: Freshness = "LIVE";
+  for (const e of evidence) {
+    if (FRESHNESS_RANK[e.freshness] > FRESHNESS_RANK[worst]) worst = e.freshness;
+  }
+  return worst;
+}
+
+interface DeterministicBlock {
+  strategyPack: StrategyPack;
+  aggregation: AggregationResult;
+  regime: MarketRegime;
+  regimeReason: string;
+  regimeCompatibility: number;
+  calibratedConfidence: number;
+  worstFreshness: Freshness;
+  probability: ProbabilityResult;
+}
 
 export interface BrainRunInput {
   correlationId: string;
