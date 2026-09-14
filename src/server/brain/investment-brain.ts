@@ -27,6 +27,77 @@ import {
   type GatewayContext,
   type GatewayRunState,
 } from "@/server/gateway/capability-gateway";
+import type { Signal } from "@/server/signals/signal-types";
+import {
+  aggregate,
+  type AggregationResult,
+  type StrategyPack,
+} from "@/server/aggregation/signal-aggregation";
+import { calibrate } from "@/server/calibration/confidence-calibration";
+import { computeProbability, type ProbabilityResult } from "@/server/probability/market-probability";
+import { getCurrentRegime, type MarketRegime } from "@/server/regime/market-regime";
+import { getStrategyOrFallback, type StrategyId } from "@/server/strategy/strategy-registry";
+import type { Freshness } from "@/server/freshness/freshness-gate";
+
+/**
+ * Deterministic strategy inference. This is a judgment call, kept as a plain
+ * keyword heuristic on purpose: it must be reproducible and auditable, so no
+ * LLM decides which strategy pack governs a run. Order matters — the more
+ * specific instrument classes are matched before the generic LONG_TERM default.
+ */
+export function inferStrategyId(request: string, triggerType: TriggerType): StrategyId {
+  const r = request.toLowerCase();
+  if (/\bsip\b/.test(r)) return "SIP";
+  if (/\bipo\b/.test(r)) return "IPO";
+  if (/\bintraday\b|\btoday\b/.test(r)) return "INTRADAY";
+  if (/\bswing\b|short[- ]term/.test(r)) return "SWING";
+  if (/\betf\b/.test(r)) return "ETF";
+  if (/mutual fund|\bfund\b/.test(r)) return "MUTUAL_FUND";
+  if (/portfolio|review|rebalance/.test(r)) return "PORTFOLIO_REVIEW";
+  // A scheduled run with no explicit request is a portfolio review by nature.
+  if (!request.trim() && triggerType !== "MANUAL") return "PORTFOLIO_REVIEW";
+  return "LONG_TERM";
+}
+
+/**
+ * Regime compatibility (0-1), documented judgment call:
+ *   aligned lean (BULL + bullish, BEAR + bearish)          -> 0.8
+ *   opposing lean (BULL + bearish, BEAR + bullish)         -> 0.3
+ *   SIDEWAYS, or a neutral composite in any regime         -> 0.5
+ *   HIGH_VOLATILITY (directional calls are less reliable)  -> 0.4
+ *   UNKNOWN (no index data — never penalise or reward)     -> 0.5
+ */
+export function regimeCompatibilityFor(regime: MarketRegime, state: string): number {
+  const bullish = state.includes("BULLISH");
+  const bearish = state.includes("BEARISH");
+  if (regime === "UNKNOWN") return 0.5;
+  if (regime === "HIGH_VOLATILITY") return 0.4;
+  if (regime === "SIDEWAYS" || (!bullish && !bearish)) return 0.5;
+  if (regime === "BULL") return bullish ? 0.8 : 0.3;
+  if (regime === "BEAR") return bearish ? 0.8 : 0.3;
+  return 0.5;
+}
+
+const FRESHNESS_RANK: Record<Freshness, number> = { LIVE: 0, FRESH: 1, STALE: 2, EXPIRED: 3 };
+
+function worstFreshnessOf(evidence: Evidence[]): Freshness {
+  let worst: Freshness = "LIVE";
+  for (const e of evidence) {
+    if (FRESHNESS_RANK[e.freshness] > FRESHNESS_RANK[worst]) worst = e.freshness;
+  }
+  return worst;
+}
+
+interface DeterministicBlock {
+  strategyPack: StrategyPack;
+  aggregation: AggregationResult;
+  regime: MarketRegime;
+  regimeReason: string;
+  regimeCompatibility: number;
+  calibratedConfidence: number;
+  worstFreshness: Freshness;
+  probability: ProbabilityResult;
+}
 
 export interface BrainRunInput {
   correlationId: string;
@@ -44,6 +115,8 @@ export interface BrainRunResult {
   promptVersion: string;
   latencyMs: number;
   tokenCost: number;
+  /** Null when no signal-bearing evidence was gathered in this run. */
+  deterministic?: DeterministicBlock | null;
 }
 
 const capabilityEnum = z.enum(
@@ -95,7 +168,8 @@ Hard rules:
 - Confidence must reflect the evidence actually present, not your prior knowledge.
 - Only cite evidence ids that were given to you.
 - Available capabilities in this build: PORTFOLIO_SNAPSHOT (the user's holdings, value, P&L, concentration, health), RULES_EVALUATE (deterministic portfolio/risk/allocation rule findings), RESEARCH_TECHNICAL (trend, SMA/RSI/ATR, 52-week position from stored daily candles for ONE symbol) and RESEARCH_FUNDAMENTAL (market cap, P/E, P/B, ROE, D/E, margins for ONE symbol). The two RESEARCH capabilities need an instrument — set the plan's instrument field when you use them, and expect an explicit "unavailable" result rather than a guess when the data has not been collected yet.
-- Evidence is labelled LIVE / FRESH / STALE / EXPIRED. STALE or EXPIRED evidence cannot on its own support an actionable call; say so and prefer INSUFFICIENT_DATA.`;
+- Evidence is labelled LIVE / FRESH / STALE / EXPIRED. STALE or EXPIRED evidence cannot on its own support an actionable call; say so and prefer INSUFFICIENT_DATA.
+- When a DETERMINISTIC ANALYSIS block is supplied, it is authoritative. It comes from deterministic engines (signal aggregation, confidence calibration, market regime, market probability), not from you. Your own stated confidence is ignored and replaced by the calibrated confidence in that block, so do not argue with it — reason consistently with it. If your qualitative read contradicts the composite state, say so explicitly in the counter-thesis instead of overriding the numbers.`;
 
 function evidenceBlock(evidence: Evidence[]): string {
   if (evidence.length === 0) return "(no evidence gathered)";
@@ -141,6 +215,11 @@ export async function run(
       capabilities: ["PORTFOLIO_SNAPSHOT", "RULES_EVALUATE"],
     };
   }
+
+  // Strategy pack is chosen deterministically from the request, before any
+  // investigation, so the pack cannot be rationalised after seeing evidence.
+  const strategyId = inferStrategyId(input.userRequest ?? "", input.triggerType);
+  const strategyPack = await getStrategyOrFallback(strategyId);
 
   // ---------- 2. INVESTIGATE + OBSERVE (bounded loop) ----------
   let queue: CapabilityId[] = [...new Set(plan.capabilities)];
@@ -196,6 +275,58 @@ export async function run(
     }
   }
 
+  // ---------- 2b. DETERMINISTIC LAYER (only when signals exist) ----------
+  // Guardrail: runs that never touched RESEARCH_TECHNICAL / RESEARCH_FUNDAMENTAL
+  // carry no Signal, so this block is skipped entirely and behaviour is
+  // byte-for-byte what it was before this wiring.
+  const signals: Signal[] = evidence
+    .map((e) => e.signal)
+    .filter((s): s is Signal => s != null);
+
+  let deterministic: DeterministicBlock | null = null;
+  if (signals.length > 0) {
+    const aggregation = aggregate(signals, strategyPack);
+    const regimeResult = await getCurrentRegime();
+    const regimeCompatibility = regimeCompatibilityFor(regimeResult.regime, aggregation.state);
+    // Only the signal-bearing evidence governs the freshness penalty; portfolio
+    // and rule evidence is always FRESH by construction and would mask decay.
+    const worstFreshness = worstFreshnessOf(
+      evidence.filter((e) => e.signal != null),
+    );
+    const calibratedConfidence = calibrate(
+      signals,
+      undefined,
+      worstFreshness,
+      regimeCompatibility,
+      strategyPack,
+    );
+    deterministic = {
+      strategyPack,
+      aggregation,
+      regime: regimeResult.regime,
+      regimeReason: regimeResult.reason,
+      regimeCompatibility,
+      calibratedConfidence,
+      worstFreshness,
+      probability: computeProbability(signals, strategyPack.signalWeights),
+    };
+  }
+
+  const deterministicPrompt = deterministic
+    ? `
+DETERMINISTIC ANALYSIS (authoritative — produced by deterministic engines, not by you):
+- Strategy pack: ${deterministic.strategyPack.id} (weights ${JSON.stringify(deterministic.strategyPack.signalWeights)})
+- Composite state: ${deterministic.aggregation.state} (score ${deterministic.aggregation.score}, engines used: ${deterministic.aggregation.usedEngines.join(", ") || "none"})
+- Market regime: ${deterministic.regime} — ${deterministic.regimeReason}
+- Regime compatibility: ${deterministic.regimeCompatibility}
+- Worst freshness across signal evidence: ${deterministic.worstFreshness}
+- Calibrated confidence: ${deterministic.calibratedConfidence}/100 (this REPLACES whatever confidence you state)
+- Probability: bullish ${deterministic.probability.bullishPct}% / bearish ${deterministic.probability.bearishPct}% / sideways ${deterministic.probability.sidewaysPct}% (probability-model confidence ${deterministic.probability.confidence})
+- Key bullish drivers: ${deterministic.probability.keyBullishDrivers.join(" | ") || "none"}
+- Key bearish risks: ${deterministic.probability.keyBearishRisks.join(" | ") || "none"}
+`
+    : "";
+
   // ---------- 3 + 4. THESIS / COUNTER-THESIS -> DECIDE ----------
   let draft: DraftDecision;
   try {
@@ -210,6 +341,7 @@ Plan understanding: ${plan.understanding}
 Evidence (the ONLY facts you may use):
 ${evidenceBlock(evidence)}
 
+${deterministicPrompt}
 Budget used: ${runState.iterationsUsed} iterations, ${runState.callsUsed} capability calls.
 
 Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exactly as given. If a live quote, valuation or company fundamental is required and absent, the action is INSUFFICIENT_DATA and you must list what is missing.`,
@@ -217,12 +349,14 @@ Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exac
     tokenCost += decided.usage?.totalTokens ?? 0;
     const o = decided.output;
     const known = new Set(evidence.map((e) => e.id));
+    const llmStatedConfidence = Math.max(0, Math.min(100, o.confidence));
     draft = {
       correlationId: input.correlationId,
       instrument: o.instrument ?? plan.instrument,
-      strategy: o.strategy,
+      strategy: o.strategy ?? strategyPack.id,
       action: o.action,
-      confidence: Math.max(0, Math.min(100, o.confidence)),
+      // The LLM never sets confidence when the deterministic layer ran.
+      confidence: deterministic ? deterministic.calibratedConfidence : llmStatedConfidence,
       thesis: o.thesis,
       counterThesis: o.counterThesis,
       supportingEvidenceIds: o.supportingEvidenceIds.filter((id) => known.has(id)),
@@ -232,6 +366,21 @@ Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exac
       missingEvidence: o.missingEvidence,
       timeHorizon: o.timeHorizon,
       monitoringPlan: o.monitoringPlan,
+      deterministic: deterministic
+        ? {
+            strategy: deterministic.strategyPack.id,
+            compositeState: deterministic.aggregation.state,
+            compositeScore: deterministic.aggregation.score,
+            regime: deterministic.regime,
+            regimeCompatibility: deterministic.regimeCompatibility,
+            calibratedConfidence: deterministic.calibratedConfidence,
+            llmStatedConfidence,
+            worstFreshness: deterministic.worstFreshness,
+            bullishPct: deterministic.probability.bullishPct,
+            bearishPct: deterministic.probability.bearishPct,
+            sidewaysPct: deterministic.probability.sidewaysPct,
+          }
+        : null,
       executionProposal: null,
       brainVersion: BRAIN_VERSION,
     };
@@ -251,6 +400,7 @@ Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exac
       missingEvidence: [err instanceof Error ? err.message : "Unknown Brain error"],
       timeHorizon: null,
       monitoringPlan: null,
+      deterministic: null,
       executionProposal: null,
       brainVersion: BRAIN_VERSION,
     };
@@ -265,5 +415,6 @@ Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exac
     promptVersion: PROMPT_VERSION,
     latencyMs: Date.now() - startedAt,
     tokenCost,
+    deterministic,
   };
 }

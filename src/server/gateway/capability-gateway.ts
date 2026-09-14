@@ -18,8 +18,8 @@ import {
   type PortfolioSummary,
 } from "@/lib/portfolio-engine";
 import { evaluateAll } from "@/server/rules/rules-engine";
-import { computeTechnical } from "@/server/signals/technical.signal";
-import { computeFundamental } from "@/server/signals/fundamental.signal";
+import { computeTechnical, toSignal as technicalToSignal } from "@/server/signals/technical.signal";
+import { computeFundamental, toSignal as fundamentalToSignal } from "@/server/signals/fundamental.signal";
 import { classify, policyFor } from "@/server/freshness/freshness-gate";
 import type { HoldingRow } from "@/lib/holdings.functions";
 import type { CapabilityId, Evidence } from "@/server/contracts";
@@ -251,6 +251,9 @@ async function execute(
           freshness,
           observedAt: t.observedAt ?? now,
           source: "signals.technical",
+          // Phase 6/7 wiring: carry the deterministic Signal so the Brain can
+          // aggregate / calibrate / score probability on it.
+          signal: technicalToSignal(t),
         },
       ];
     }
@@ -271,6 +274,7 @@ async function execute(
         freshness,
         observedAt: f.observedAt ?? now,
         source: f.source,
+        signal: fundamentalToSignal(f),
       },
     ];
   }
