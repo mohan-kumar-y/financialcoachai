@@ -349,12 +349,14 @@ Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exac
     tokenCost += decided.usage?.totalTokens ?? 0;
     const o = decided.output;
     const known = new Set(evidence.map((e) => e.id));
+    const llmStatedConfidence = Math.max(0, Math.min(100, o.confidence));
     draft = {
       correlationId: input.correlationId,
       instrument: o.instrument ?? plan.instrument,
-      strategy: o.strategy,
+      strategy: o.strategy ?? strategyPack.id,
       action: o.action,
-      confidence: Math.max(0, Math.min(100, o.confidence)),
+      // The LLM never sets confidence when the deterministic layer ran.
+      confidence: deterministic ? deterministic.calibratedConfidence : llmStatedConfidence,
       thesis: o.thesis,
       counterThesis: o.counterThesis,
       supportingEvidenceIds: o.supportingEvidenceIds.filter((id) => known.has(id)),
