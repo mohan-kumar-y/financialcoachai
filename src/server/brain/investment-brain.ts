@@ -216,6 +216,11 @@ export async function run(
     };
   }
 
+  // Strategy pack is chosen deterministically from the request, before any
+  // investigation, so the pack cannot be rationalised after seeing evidence.
+  const strategyId = inferStrategyId(input.userRequest ?? "", input.triggerType);
+  const strategyPack = await getStrategyOrFallback(strategyId);
+
   // ---------- 2. INVESTIGATE + OBSERVE (bounded loop) ----------
   let queue: CapabilityId[] = [...new Set(plan.capabilities)];
 
