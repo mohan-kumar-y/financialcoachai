@@ -341,6 +341,7 @@ Plan understanding: ${plan.understanding}
 Evidence (the ONLY facts you may use):
 ${evidenceBlock(evidence)}
 
+${deterministicPrompt}
 Budget used: ${runState.iterationsUsed} iterations, ${runState.callsUsed} capability calls.
 
 Build a thesis and an honest counter-thesis, then decide. Cite evidence ids exactly as given. If a live quote, valuation or company fundamental is required and absent, the action is INSUFFICIENT_DATA and you must list what is missing.`,
