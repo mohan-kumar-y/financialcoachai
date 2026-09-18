@@ -44,6 +44,17 @@ export const addWatch = createServerFn({ method: "POST" })
       .from("watchlist")
       .insert({ user_id: userId, symbol, name: data.name.trim() });
     if (error) throw new Error(error.message);
+
+    // Phase 8: adding a symbol expresses new intent and is worth a Brain run.
+    // Removals deliberately do NOT fire — a removed symbol has no decision to
+    // make, and firing on every removal is pure cost with no signal value.
+    const { fire } = await import("@/server/trigger/trigger-engine");
+    await fire("WATCHLIST_CHANGE", {
+      userId,
+      supabase,
+      request: `Watchlist addition: ${symbol}. Assess whether this is worth acting on.`,
+    });
+
     return { ok: true, existed: false };
   });
 
