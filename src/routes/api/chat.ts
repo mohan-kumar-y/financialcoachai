@@ -170,44 +170,21 @@ export const Route = createFileRoute("/api/chat")({
         const uiMessages = messages as UIMessage[];
         const caller = await resolveCaller(request);
 
-        // 1. Investment Brain -> 2. Decision Validator (skipped for anonymous
-        //    callers: no portfolio context means no decision to validate).
-        let decision = null as Awaited<ReturnType<typeof validate>>["decision"] | null;
-        let evidence: Awaited<ReturnType<typeof runBrain>>["evidence"] = [];
+        // 1+2. Brain -> Validator -> audit, all behind the Trigger Engine
+        //      (skipped for anonymous callers: no portfolio context).
+        let decision: Decision | null = null;
+        let evidence: Evidence[] = [];
         let decisionId: string | null = null;
 
         if (caller) {
-          try {
-            const correlationId = crypto.randomUUID();
-            const brain = await runBrain(
-              {
-                correlationId,
-                userRequest: lastUserText(uiMessages),
-                triggerType: "MANUAL",
-                userId: caller.userId,
-              },
-              { supabase: caller.supabase, userId: caller.userId },
-            );
-            evidence = brain.evidence;
-            const outcome = await validate(brain.draft, {
-              supabase: caller.supabase,
-              userId: caller.userId,
-              evidence: brain.evidence,
-            });
-            decision = outcome.decision;
-            await recordBrainRun(brain, {
-              userId: caller.userId,
-              requestText: lastUserText(uiMessages) || null,
-              triggerType: "MANUAL",
-            });
-            decisionId = await recordDecision(outcome.decision, {
-              failures: outcome.failures,
-              notes: outcome.notes,
-            });
-          } catch (err) {
-            console.error("[chat] brain pipeline failed:", err);
-            decision = null;
-          }
+          const fired = await fire("MANUAL", {
+            userId: caller.userId,
+            supabase: caller.supabase,
+            request: lastUserText(uiMessages),
+          });
+          decision = fired.decision;
+          evidence = fired.evidence;
+          decisionId = fired.decisionId;
         }
 
         // 3. Explanation Engine — prose only, never a verdict of its own.
