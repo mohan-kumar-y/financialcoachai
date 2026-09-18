@@ -22,17 +22,13 @@ import {
   fmtNum,
   fmtPrice,
 } from "@/lib/market-data";
-import { run as runBrain } from "@/server/brain/investment-brain";
-import { validate } from "@/server/validator/decision-validator";
+import { fire } from "@/server/trigger/trigger-engine";
+import type { Decision, Evidence } from "@/server/contracts";
 import {
   streamExplanation,
   parseExplanation,
 } from "@/server/explanation/explanation-engine";
-import {
-  recordBrainRun,
-  recordDecision,
-  recordExplanation,
-} from "@/server/audit/audit-store";
+import { recordExplanation } from "@/server/audit/audit-store";
 
 type ChatRequestBody = { messages?: unknown };
 

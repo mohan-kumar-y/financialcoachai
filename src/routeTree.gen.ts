@@ -30,6 +30,7 @@ import { Route as AuthenticatedBriefRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAlertsRouteImport } from './routes/_authenticated/alerts'
 import { Route as AuthenticatedAdvisorRouteImport } from './routes/_authenticated/advisor'
 import { Route as ApiPublicCronPollQuotesRouteImport } from './routes/api/public/cron/poll-quotes'
+import { Route as ApiPublicCronMarketSessionRouteImport } from './routes/api/public/cron/market-session'
 import { Route as ApiPublicCronDailyBriefRouteImport } from './routes/api/public/cron/daily-brief'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -137,6 +138,12 @@ const ApiPublicCronPollQuotesRoute = ApiPublicCronPollQuotesRouteImport.update({
   path: '/api/public/cron/poll-quotes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronMarketSessionRoute =
+  ApiPublicCronMarketSessionRouteImport.update({
+    id: '/api/public/cron/market-session',
+    path: '/api/public/cron/market-session',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronDailyBriefRoute = ApiPublicCronDailyBriefRouteImport.update({
   id: '/api/public/cron/daily-brief',
   path: '/api/public/cron/daily-brief',
@@ -164,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
   '/api/public/cron/daily-brief': typeof ApiPublicCronDailyBriefRoute
+  '/api/public/cron/market-session': typeof ApiPublicCronMarketSessionRoute
   '/api/public/cron/poll-quotes': typeof ApiPublicCronPollQuotesRoute
 }
 export interface FileRoutesByTo {
@@ -187,6 +195,7 @@ export interface FileRoutesByTo {
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
   '/api/public/cron/daily-brief': typeof ApiPublicCronDailyBriefRoute
+  '/api/public/cron/market-session': typeof ApiPublicCronMarketSessionRoute
   '/api/public/cron/poll-quotes': typeof ApiPublicCronPollQuotesRoute
 }
 export interface FileRoutesById {
@@ -212,6 +221,7 @@ export interface FileRoutesById {
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
   '/api/public/cron/daily-brief': typeof ApiPublicCronDailyBriefRoute
+  '/api/public/cron/market-session': typeof ApiPublicCronMarketSessionRoute
   '/api/public/cron/poll-quotes': typeof ApiPublicCronPollQuotesRoute
 }
 export interface FileRouteTypes {
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/spending'
     | '/api/chat'
     | '/api/public/cron/daily-brief'
+    | '/api/public/cron/market-session'
     | '/api/public/cron/poll-quotes'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/spending'
     | '/api/chat'
     | '/api/public/cron/daily-brief'
+    | '/api/public/cron/market-session'
     | '/api/public/cron/poll-quotes'
   id:
     | '__root__'
@@ -284,6 +296,7 @@ export interface FileRouteTypes {
     | '/_authenticated/spending'
     | '/api/chat'
     | '/api/public/cron/daily-brief'
+    | '/api/public/cron/market-session'
     | '/api/public/cron/poll-quotes'
   fileRoutesById: FileRoutesById
 }
@@ -296,6 +309,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiPublicCronDailyBriefRoute: typeof ApiPublicCronDailyBriefRoute
+  ApiPublicCronMarketSessionRoute: typeof ApiPublicCronMarketSessionRoute
   ApiPublicCronPollQuotesRoute: typeof ApiPublicCronPollQuotesRoute
 }
 
@@ -448,6 +462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronPollQuotesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/market-session': {
+      id: '/api/public/cron/market-session'
+      path: '/api/public/cron/market-session'
+      fullPath: '/api/public/cron/market-session'
+      preLoaderRoute: typeof ApiPublicCronMarketSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/daily-brief': {
       id: '/api/public/cron/daily-brief'
       path: '/api/public/cron/daily-brief'
@@ -502,6 +523,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiChatRoute: ApiChatRoute,
   ApiPublicCronDailyBriefRoute: ApiPublicCronDailyBriefRoute,
+  ApiPublicCronMarketSessionRoute: ApiPublicCronMarketSessionRoute,
   ApiPublicCronPollQuotesRoute: ApiPublicCronPollQuotesRoute,
 }
 export const routeTree = rootRouteImport
