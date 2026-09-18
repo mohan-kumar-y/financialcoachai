@@ -62,6 +62,17 @@ export const createHolding = createServerFn({ method: "POST" })
       category: data.category ?? null,
     });
     if (error) throw new Error(error.message);
+
+    // Phase 8: a NEW position materially changes portfolio shape, so it earns a
+    // Brain run. Edits, deletions and price refreshes deliberately do NOT fire —
+    // one LLM run per field edit is costly and carries little new signal.
+    const { fire } = await import("@/server/trigger/trigger-engine");
+    await fire("PORTFOLIO_CHANGE", {
+      userId,
+      supabase,
+      request: `New holding added: ${data.name}${data.symbol ? ` (${data.symbol})` : ""}. Review portfolio impact.`,
+    });
+
     return { ok: true };
   });
 
