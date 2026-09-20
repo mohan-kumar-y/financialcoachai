@@ -81,7 +81,13 @@ export const PHASE1_GATEWAY_CONFIG: CapabilityGatewayConfig = {
     "PORTFOLIO_SNAPSHOT",
     "RESEARCH_TECHNICAL",
     "RESEARCH_FUNDAMENTAL",
+    // Phase 9
+    "EVENTS_CORP_ACTION",
+    "EVENTS_NEWS",
+    "DISCOVERY_SCREEN",
+    "WATCHLIST_QUERY",
   ],
+
   maxIterations: 3,
 
   maxCapabilityCalls: 6,
