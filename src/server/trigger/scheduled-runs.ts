@@ -44,12 +44,28 @@ export async function runDailyBrief(now: Date = new Date()): Promise<DailyBriefR
   let succeeded = 0;
   let failed = 0;
 
+  // Phase 9: the screens are cross-referenced per user, so the Brain is nudged
+  // only toward names the user is NOT already holding or watching. Failure here
+  // must not cost the brief — we simply fall back to the plain request text.
+  const { getDiscoveryWithContext, summarizeNewIdeas } = await import(
+    "@/server/discovery/discovery-engine"
+  );
+
   for (const userId of targets) {
     try {
+      let request = "Daily pre-market portfolio review";
+      try {
+        const ideas = await getDiscoveryWithContext(userId, supabaseAdmin);
+        const summary = summarizeNewIdeas(ideas, 3);
+        if (summary) request = `${request}. ${summary}`;
+      } catch (err) {
+        console.warn("[cron/daily-brief] discovery context unavailable:", err);
+      }
+
       const result = await fire("SCHEDULED", {
         userId,
         supabase: supabaseAdmin,
-        request: "Daily pre-market portfolio review",
+        request,
       });
       if (result.decision) succeeded++;
       else failed++;
@@ -59,6 +75,7 @@ export async function runDailyBrief(now: Date = new Date()): Promise<DailyBriefR
       console.error("[cron/daily-brief] user run threw:", err);
     }
   }
+
 
   console.log(
     `[cron/daily-brief] users=${targets.length} succeeded=${succeeded} failed=${failed}`,
