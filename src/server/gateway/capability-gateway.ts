@@ -286,8 +286,85 @@ async function execute(
   }
 
 
+  // ---- Phase 9: events, sentiment, discovery, watchlist --------------------
+  if (req.capability === "EVENTS_CORP_ACTION" || req.capability === "EVENTS_NEWS") {
+    const symbol = String(
+      (req.params?.["symbol"] as string | undefined) ??
+        (req.params?.["instrument"] as string | undefined) ??
+        "",
+    ).trim();
+    if (!symbol) throw new Error(`${req.capability} requires an instrument symbol`);
 
-  throw new Error(`Capability ${req.capability} has no Phase 1 implementation`);
+    if (req.capability === "EVENTS_CORP_ACTION") {
+      const { getCorporateActionSignal } = await import("@/server/signals/corporate-action.signal");
+      return (await getCorporateActionSignal(symbol, req.correlationId)).evidence;
+    }
+
+    // EVENTS_NEWS currently carries social/news-derived sentiment (Phase 9).
+    const companyName = (req.params?.["name"] as string | undefined)?.trim();
+    const { getSentimentSignal } = await import("@/server/signals/sentiment.signal");
+    return (await getSentimentSignal(symbol, companyName, req.correlationId)).evidence;
+  }
+
+  if (req.capability === "DISCOVERY_SCREEN") {
+    const { getDiscoveryWithContext } = await import("@/server/discovery/discovery-engine");
+    const ctx = await getDiscoveryWithContext(ctx_.userId, ctx_.supabase);
+    const counts = Object.entries(ctx.newIdeas).map(([tag, list]) => `${tag} ${list.length}`);
+    const top = Object.entries(ctx.newIdeas)
+      .flatMap(([tag, list]) => list.slice(0, 3).map((i) => `${i.symbol} (${tag})`))
+      .join(", ");
+    return [
+      {
+        id: evidenceId(),
+        correlationId: req.correlationId,
+        capability: "DISCOVERY_SCREEN",
+        summary:
+          top.length > 0
+            ? `Discovery screens, excluding anything already held or watched — ${counts.join(", ")}. Top new ideas: ${top}.`
+            : "Discovery screens returned no ideas the user is not already tracking.",
+        // alreadyTracking is deliberately not returned: it is not new information.
+        payload: { newIdeas: ctx.newIdeas },
+        freshness: ctx.meta.status === "ok" ? "FRESH" : ctx.meta.status === "stale" ? "STALE" : "EXPIRED",
+        observedAt: ctx.meta.fetchedAt ?? now,
+        source: ctx.meta.source,
+      },
+    ];
+  }
+
+  if (req.capability === "WATCHLIST_QUERY") {
+    const { data, error } = await ctx_.supabase
+      .from("watchlist")
+      .select("symbol, name, target_price, target_direction")
+      .eq("user_id", ctx_.userId)
+      .order("created_at", { ascending: true })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    const items = data ?? [];
+    return [
+      {
+        id: evidenceId(),
+        correlationId: req.correlationId,
+        capability: "WATCHLIST_QUERY",
+        summary:
+          items.length === 0
+            ? "The user's watchlist is empty."
+            : `Watchlist (${items.length}): ${items
+                .map((w) =>
+                  w.target_price
+                    ? `${w.symbol} target ${w.target_direction === "BELOW" ? "below" : "above"} ₹${Number(w.target_price).toLocaleString("en-IN")}`
+                    : w.symbol,
+                )
+                .join(", ")}.`,
+        payload: { items },
+        freshness: "FRESH",
+        observedAt: now,
+        source: "wealthos.watchlist",
+      },
+    ];
+  }
+
+  throw new Error(`Capability ${req.capability} has no implementation`);
+
 }
 
 export async function invoke(
