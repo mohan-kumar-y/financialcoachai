@@ -6,6 +6,8 @@ import { getLTP, hasAngelCredentials, persistQuote } from "./angel-one.adapter";
 import { resolveSymbol } from "./angel-one.instruments";
 import { isMarketOpen } from "@/server/calendar/market-calendar";
 import { detectAndPersist } from "@/server/anomaly/anomaly-detection";
+import { checkTargetAlerts } from "@/server/watchlist/watchlist-engine";
+
 
 export interface PollResult {
   status: "skipped" | "ok";
