@@ -308,9 +308,9 @@ async function execute(
 
   if (req.capability === "DISCOVERY_SCREEN") {
     const { getDiscoveryWithContext } = await import("@/server/discovery/discovery-engine");
-    const ctx = await getDiscoveryWithContext(ctx.userId, ctx.supabase);
-    const counts = Object.entries(ctx.newIdeas).map(([tag, list]) => `${tag} ${list.length}`);
-    const top = Object.entries(ctx.newIdeas)
+    const disc = await getDiscoveryWithContext(ctx.userId, ctx.supabase);
+    const counts = Object.entries(disc.newIdeas).map(([tag, list]) => `${tag} ${list.length}`);
+    const top = Object.entries(disc.newIdeas)
       .flatMap(([tag, list]) => list.slice(0, 3).map((i) => `${i.symbol} (${tag})`))
       .join(", ");
     return [
@@ -323,13 +323,15 @@ async function execute(
             ? `Discovery screens, excluding anything already held or watched — ${counts.join(", ")}. Top new ideas: ${top}.`
             : "Discovery screens returned no ideas the user is not already tracking.",
         // alreadyTracking is deliberately not returned: it is not new information.
-        payload: { newIdeas: ctx.newIdeas },
-        freshness: ctx.meta.status === "ok" ? "FRESH" : ctx.meta.status === "stale" ? "STALE" : "EXPIRED",
-        observedAt: ctx.meta.fetchedAt ?? now,
-        source: ctx.meta.source,
+        payload: { newIdeas: disc.newIdeas },
+        freshness:
+          disc.meta.status === "ok" ? "FRESH" : disc.meta.status === "stale" ? "STALE" : "EXPIRED",
+        observedAt: disc.meta.fetchedAt ?? now,
+        source: disc.meta.source,
       },
     ];
   }
+
 
   if (req.capability === "WATCHLIST_QUERY") {
     const { data, error } = await ctx.supabase
