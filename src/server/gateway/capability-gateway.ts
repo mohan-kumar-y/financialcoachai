@@ -308,7 +308,7 @@ async function execute(
 
   if (req.capability === "DISCOVERY_SCREEN") {
     const { getDiscoveryWithContext } = await import("@/server/discovery/discovery-engine");
-    const ctx = await getDiscoveryWithContext(ctx_.userId, ctx_.supabase);
+    const ctx = await getDiscoveryWithContext(ctx.userId, ctx.supabase);
     const counts = Object.entries(ctx.newIdeas).map(([tag, list]) => `${tag} ${list.length}`);
     const top = Object.entries(ctx.newIdeas)
       .flatMap(([tag, list]) => list.slice(0, 3).map((i) => `${i.symbol} (${tag})`))
@@ -332,10 +332,10 @@ async function execute(
   }
 
   if (req.capability === "WATCHLIST_QUERY") {
-    const { data, error } = await ctx_.supabase
+    const { data, error } = await ctx.supabase
       .from("watchlist")
       .select("symbol, name, target_price, target_direction")
-      .eq("user_id", ctx_.userId)
+      .eq("user_id", ctx.userId)
       .order("created_at", { ascending: true })
       .limit(100);
     if (error) throw new Error(error.message);
