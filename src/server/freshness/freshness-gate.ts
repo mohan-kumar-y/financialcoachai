@@ -25,7 +25,14 @@ export const DEFAULT_POLICIES: FreshnessPolicy[] = [
   // Phase 5: fundamentals refresh daily; a week-old payload is stale, a
   // month-old one is expired and must not back an actionable call.
   { dataType: "FUNDAMENTAL", liveThresholdSec: 86400, freshThresholdSec: 604800, staleThresholdSec: 2592000 },
+  // Phase 9: corporate actions are dated announcements — a record/ex date that
+  // is a week old has usually already passed, so the window is tighter than
+  // FUNDAMENTAL: live for a day, fresh for three, stale for a week.
+  { dataType: "CORP_ACTION", liveThresholdSec: 86400, freshThresholdSec: 259200, staleThresholdSec: 604800 },
+  // Phase 9: news/social sentiment decays fast.
+  { dataType: "NEWS", liveThresholdSec: 3600, freshThresholdSec: 86400, staleThresholdSec: 604800 },
 ];
+
 
 
 /** Look up the policy for a data type (+ strategy where applicable). */

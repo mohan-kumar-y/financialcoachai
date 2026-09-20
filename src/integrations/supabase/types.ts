@@ -567,6 +567,8 @@ export type Database = {
           id: string
           name: string
           symbol: string
+          target_direction: string | null
+          target_price: number | null
           user_id: string
         }
         Insert: {
@@ -574,6 +576,8 @@ export type Database = {
           id?: string
           name: string
           symbol: string
+          target_direction?: string | null
+          target_price?: number | null
           user_id: string
         }
         Update: {
@@ -581,9 +585,52 @@ export type Database = {
           id?: string
           name?: string
           symbol?: string
+          target_direction?: string | null
+          target_price?: number | null
           user_id?: string
         }
         Relationships: []
+      }
+      watchlist_alerts: {
+        Row: {
+          direction: string
+          id: string
+          ltp_at_trigger: number
+          symbol: string
+          target_price: number
+          triggered_at: string
+          user_id: string
+          watchlist_id: string
+        }
+        Insert: {
+          direction: string
+          id?: string
+          ltp_at_trigger: number
+          symbol: string
+          target_price: number
+          triggered_at?: string
+          user_id: string
+          watchlist_id: string
+        }
+        Update: {
+          direction?: string
+          id?: string
+          ltp_at_trigger?: number
+          symbol?: string
+          target_price?: number
+          triggered_at?: string
+          user_id?: string
+          watchlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watchlist_alerts_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "watchlist"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

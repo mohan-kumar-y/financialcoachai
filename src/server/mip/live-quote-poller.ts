@@ -6,6 +6,8 @@ import { getLTP, hasAngelCredentials, persistQuote } from "./angel-one.adapter";
 import { resolveSymbol } from "./angel-one.instruments";
 import { isMarketOpen } from "@/server/calendar/market-calendar";
 import { detectAndPersist } from "@/server/anomaly/anomaly-detection";
+import { checkTargetAlerts } from "@/server/watchlist/watchlist-engine";
+
 
 export interface PollResult {
   status: "skipped" | "ok";
@@ -64,6 +66,14 @@ export async function pollLiveQuotes(now: Date = new Date()): Promise<PollResult
     // Phase 6: anomaly check on the freshly persisted tick. Cheap (one indexed
     // candle read) and non-fatal — symbols without enough history skip silently.
     await detectAndPersist(symbol, quote.data.ltp);
+    // Phase 9: watchlist target-price crossings. Same non-blocking posture —
+    // an alerting failure must never stop the poll loop.
+    try {
+      await checkTargetAlerts(symbol, quote.data.ltp);
+    } catch (err) {
+      console.warn(`[poller] target alert check failed for ${symbol}:`, err);
+    }
   }
+
   return { status: "ok", requested: symbols.length, stored, failed };
 }
