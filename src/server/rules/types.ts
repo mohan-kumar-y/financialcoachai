@@ -25,6 +25,14 @@ export interface RuleContext {
   monthlyIncome?: number;
   currentSip?: number;
   now?: Date;
+  /** Phase 10: owner of the portfolio being evaluated. */
+  userId?: string;
+  /**
+   * Phase 10: the user's stated risk tolerance from user_preferences, loaded
+   * by the caller (rules stay synchronous/pure). null/undefined = never set —
+   * RISK rules then report insufficient data rather than assume a default.
+   */
+  riskTolerance?: "CONSERVATIVE" | "MODERATE" | "AGGRESSIVE" | null;
 }
 
 export interface RuleEvaluation {

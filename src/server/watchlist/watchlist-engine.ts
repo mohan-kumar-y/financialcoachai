@@ -53,16 +53,29 @@ export async function checkTargetAlerts(symbol: string, ltp: number): Promise<vo
       .maybeSingle();
     if (recent) continue;
 
-    const { error: insertError } = await supabaseAdmin.from("watchlist_alerts").insert({
-      user_id: row.user_id,
-      watchlist_id: row.id,
-      symbol: upper,
-      target_price: target,
-      direction,
-      ltp_at_trigger: ltp,
-    });
+    const { data: inserted, error: insertError } = await supabaseAdmin
+      .from("watchlist_alerts")
+      .insert({
+        user_id: row.user_id,
+        watchlist_id: row.id,
+        symbol: upper,
+        target_price: target,
+        direction,
+        ltp_at_trigger: ltp,
+      })
+      .select("id")
+      .single();
     if (insertError) {
       console.warn(`[watchlist-engine] ${upper} alert insert failed:`, insertError.message);
+      continue;
     }
+    // Phase 10: dashboard always; email attempt — dispatch() checks preferences.
+    const { dispatchDashboardAndEmail } = await import("@/server/notification/notification-engine");
+    await dispatchDashboardAndEmail(
+      row.user_id,
+      `${upper} crossed your ₹${target} target`,
+      `${upper} is at ₹${ltp.toFixed(2)}, ${direction === "ABOVE" ? "at or above" : "at or below"} your target of ₹${target}.`,
+      { alertId: inserted?.id ?? null },
+    );
   }
 }

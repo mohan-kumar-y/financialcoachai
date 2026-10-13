@@ -177,7 +177,10 @@ export async function detectAndPersist(symbol: string, ltp: number | null): Prom
     }
     const candles = data.slice().reverse() as CandleRow[];
     const flag = detect({ symbol, candles, ltp, observedAt: new Date().toISOString() });
-    if (flag.flagged) await persistAnomaly(flag);
+    if (flag.flagged) {
+      await persistAnomaly(flag);
+      if (flag.confidence >= NOTIFY_MIN_CONFIDENCE) await notifyHolders(flag);
+    }
     return flag;
   } catch (err) {
     console.debug("[anomaly] detection skipped:", (err as Error).message);

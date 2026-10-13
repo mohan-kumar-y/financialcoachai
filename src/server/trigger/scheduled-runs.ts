@@ -67,8 +67,19 @@ export async function runDailyBrief(now: Date = new Date()): Promise<DailyBriefR
         supabase: supabaseAdmin,
         request,
       });
-      if (result.decision) succeeded++;
-      else failed++;
+      if (result.decision) {
+        succeeded++;
+        // Phase 10: notify with the decision headline (dashboard + email attempt).
+        const d = result.decision;
+        const headline = `${d.action}${d.instrument ? ` ${d.instrument}` : ""} — confidence ${Math.round(d.confidence)}`;
+        const { dispatchDashboardAndEmail } = await import("@/server/notification/notification-engine");
+        await dispatchDashboardAndEmail(
+          userId,
+          `Your daily brief: ${headline}`,
+          `${headline}\n\n${d.thesis}`.slice(0, 2000),
+          { decisionId: result.decisionId },
+        );
+      } else failed++;
     } catch (err) {
       // One user's failure must never stop the batch.
       failed++;

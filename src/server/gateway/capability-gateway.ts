@@ -208,7 +208,17 @@ async function execute(
     const p = await portfolioSnapshot(ctx);
     // Phase 3: the formal 12-category Rules Engine replaces the direct
     // advisor.buildAdvisorActions call. Capability id is unchanged.
-    const evaluations = evaluateAll({ portfolio: p });
+    // Phase 10: stated risk tolerance feeds the RISK category. Missing row or
+    // null field stays null → RISK reports insufficient data.
+    const { data: prefs } = await ctx.supabase
+      .from("user_preferences")
+      .select("risk_tolerance")
+      .eq("user_id", ctx.userId)
+      .maybeSingle();
+    const rt = prefs?.risk_tolerance;
+    const riskTolerance =
+      rt === "CONSERVATIVE" || rt === "MODERATE" || rt === "AGGRESSIVE" ? rt : null;
+    const evaluations = evaluateAll({ portfolio: p, userId: ctx.userId, riskTolerance });
     return evaluations.map((e) => ({
       id: evidenceId(),
       correlationId: req.correlationId,

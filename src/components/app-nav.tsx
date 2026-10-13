@@ -18,6 +18,7 @@ import {
   Newspaper,
   Layers,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/projections", label: "Projections", icon: LineChart },
       { to: "/goals", label: "Goals", icon: Target },
       { to: "/playbook", label: "Playbook", icon: ListChecks },
+      { to: "/settings", label: "Settings", icon: Settings },
     ],
   },
 ];
