@@ -507,6 +507,56 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string
+          channel: string
+          created_at: string
+          failure_reason: string | null
+          id: string
+          related_alert_id: string | null
+          related_decision_id: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          channel: string
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          related_alert_id?: string | null
+          related_decision_id?: string | null
+          sent_at?: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          related_alert_id?: string | null
+          related_decision_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_alert_id_fkey"
+            columns: ["related_alert_id"]
+            isOneToOne: false
+            referencedRelation: "watchlist_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -558,6 +608,39 @@ export type Database = {
           signal_weights?: Json
           thresholds?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          email_address: string | null
+          notify_email: boolean
+          notify_push: boolean
+          preferred_sectors: string[] | null
+          risk_tolerance: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_address?: string | null
+          notify_email?: boolean
+          notify_push?: boolean
+          preferred_sectors?: string[] | null
+          risk_tolerance?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_address?: string | null
+          notify_email?: boolean
+          notify_push?: boolean
+          preferred_sectors?: string[] | null
+          risk_tolerance?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
