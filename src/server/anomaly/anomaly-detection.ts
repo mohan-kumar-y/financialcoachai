@@ -157,6 +157,39 @@ export async function persistAnomaly(flag: AnomalyFlag): Promise<void> {
 }
 
 /**
+ * Phase 10: only notify on genuinely notable flags. Base flag confidence is
+ * 0.4 at the bare threshold; 0.6 requires a clear excess (e.g. ~3.3σ alone,
+ * or price + volume together), filtering minor just-over-threshold moves.
+ */
+export const NOTIFY_MIN_CONFIDENCE = 0.6;
+
+/** Dashboard notification to users who HOLD the symbol (not watchlist-only). */
+async function notifyHolders(flag: AnomalyFlag): Promise<void> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("holdings")
+      .select("user_id")
+      .ilike("symbol", flag.symbol)
+      .limit(500);
+    const users = new Set((data ?? []).map((r) => r.user_id));
+    if (users.size === 0) return;
+    const { dispatch } = await import("@/server/notification/notification-engine");
+    const label = flag.driverClass.replaceAll("_", " ").toLowerCase();
+    for (const userId of users) {
+      await dispatch(
+        userId,
+        "DASHBOARD",
+        `Unusual move in ${flag.symbol}`,
+        `${flag.symbol}: ${label} (confidence ${Math.round(flag.confidence * 100)}%). ${flag.reason}. No cause has been identified from available data.`,
+      );
+    }
+  } catch (err) {
+    console.debug("[anomaly] holder notification skipped:", (err as Error).message);
+  }
+}
+
+/**
  * Cron path: load the trailing candles for a symbol, compare against the given
  * live tick, and persist a flag when one fires. Silent no-op when history is
  * too thin — the poll loop must never fail because of this.
@@ -177,7 +210,10 @@ export async function detectAndPersist(symbol: string, ltp: number | null): Prom
     }
     const candles = data.slice().reverse() as CandleRow[];
     const flag = detect({ symbol, candles, ltp, observedAt: new Date().toISOString() });
-    if (flag.flagged) await persistAnomaly(flag);
+    if (flag.flagged) {
+      await persistAnomaly(flag);
+      if (flag.confidence >= NOTIFY_MIN_CONFIDENCE) await notifyHolders(flag);
+    }
     return flag;
   } catch (err) {
     console.debug("[anomaly] detection skipped:", (err as Error).message);
