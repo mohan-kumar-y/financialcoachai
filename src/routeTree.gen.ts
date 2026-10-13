@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticated/spending'
 import { Route as AuthenticatedSignalsRouteImport } from './routes/_authenticated/signals'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
 import { Route as AuthenticatedProjectionsRouteImport } from './routes/_authenticated/projections'
 import { Route as AuthenticatedPlaybookRouteImport } from './routes/_authenticated/playbook'
@@ -75,6 +76,11 @@ const AuthenticatedSpendingRoute = AuthenticatedSpendingRouteImport.update({
 const AuthenticatedSignalsRoute = AuthenticatedSignalsRouteImport.update({
   id: '/signals',
   path: '/signals',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedResearchRoute = AuthenticatedResearchRouteImport.update({
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
   '/research': typeof AuthenticatedResearchRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/playbook': typeof AuthenticatedPlaybookRoute
   '/projections': typeof AuthenticatedProjectionsRoute
   '/research': typeof AuthenticatedResearchRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/signals': typeof AuthenticatedSignalsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/_authenticated/playbook': typeof AuthenticatedPlaybookRoute
   '/_authenticated/projections': typeof AuthenticatedProjectionsRoute
   '/_authenticated/research': typeof AuthenticatedResearchRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/signals': typeof AuthenticatedSignalsRoute
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
   '/api/chat': typeof ApiChatRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/playbook'
     | '/projections'
     | '/research'
+    | '/settings'
     | '/signals'
     | '/spending'
     | '/api/chat'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/playbook'
     | '/projections'
     | '/research'
+    | '/settings'
     | '/signals'
     | '/spending'
     | '/api/chat'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/_authenticated/playbook'
     | '/_authenticated/projections'
     | '/_authenticated/research'
+    | '/_authenticated/settings'
     | '/_authenticated/signals'
     | '/_authenticated/spending'
     | '/api/chat'
@@ -376,6 +388,13 @@ declare module '@tanstack/react-router' {
       path: '/signals'
       fullPath: '/signals'
       preLoaderRoute: typeof AuthenticatedSignalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/research': {
@@ -491,6 +510,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlaybookRoute: typeof AuthenticatedPlaybookRoute
   AuthenticatedProjectionsRoute: typeof AuthenticatedProjectionsRoute
   AuthenticatedResearchRoute: typeof AuthenticatedResearchRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSignalsRoute: typeof AuthenticatedSignalsRoute
   AuthenticatedSpendingRoute: typeof AuthenticatedSpendingRoute
 }
@@ -507,6 +527,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlaybookRoute: AuthenticatedPlaybookRoute,
   AuthenticatedProjectionsRoute: AuthenticatedProjectionsRoute,
   AuthenticatedResearchRoute: AuthenticatedResearchRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSignalsRoute: AuthenticatedSignalsRoute,
   AuthenticatedSpendingRoute: AuthenticatedSpendingRoute,
 }
